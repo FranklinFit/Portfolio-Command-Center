@@ -1,0 +1,3140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robinhood Portfolio Command Center v3 — Tactical Yield</title>
+<meta name="description" content="Drop a Robinhood .csv OR .xlsx activity statement. Three-bucket split, daily/weekly income, NET % IN/OUT, Margin Dividend Tracker, scaling table. Live Yahoo Finance quotes.">
+<style>
+  :root {
+    --bg: #0a0e0c;
+    --bg-elev: #131917;
+    --bg-card: #1a211d;
+    --border: #2a3530;
+    --border-hot: #3a4a42;
+    --text: #e8f0ea;
+    --text-dim: #8a9a8e;
+    --text-faint: #5a6a5e;
+    --green: #2ddc7a;
+    --green-dim: #1a8a4a;
+    --red: #ff5c5c;
+    --red-dim: #8a2a2a;
+    --amber: #f5b942;
+    --amber-dim: #8a6a20;
+    --orange: #ff9f43;
+    --orange-dim: #8a5a20;
+    --blue: #5cb8ff;
+    --purple: #b88aff;
+    --teal: #4ad9c4;
+    --mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'Consolas', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Helvetica Neue', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 20px 20px 80px; }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+  .brand-row { display: flex; align-items: center; gap: 12px; }
+  .brand-mark { width: 36px; height: 36px; background: linear-gradient(135deg, var(--green), var(--green-dim)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; color: #0a0e0c; font-size: 18px; }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .tagline { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
+  .updated { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+  .updated strong { color: var(--green); }
+  .updated.stale strong { color: var(--amber); }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-family: var(--sans); font-size: 13px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
+  .btn:hover { background: var(--border); border-color: var(--border-hot); }
+  .btn.primary { background: var(--green-dim); border-color: var(--green); color: #0a0e0c; font-weight: 600; }
+  .btn.primary:hover { background: var(--green); }
+  .btn.danger { background: transparent; border-color: var(--red-dim); color: var(--red); }
+  .btn.danger:hover { background: var(--red-dim); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .input-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+  .input-section summary { cursor: pointer; user-select: none; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .input-section summary::before { content: '▸'; transition: transform 0.2s; color: var(--text-dim); }
+  .input-section[open] summary::before { transform: rotate(90deg); }
+  .input-section summary span.hint { font-weight: 400; color: var(--text-dim); font-size: 12px; margin-left: 8px; }
+  .input-body { margin-top: 14px; }
+  .paste-area { width: 100%; min-height: 140px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-family: var(--mono); font-size: 12px; resize: vertical; outline: none; }
+  .paste-area:focus { border-color: var(--green-dim); }
+  .file-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .file-row input[type=file] { display: none; }
+  .file-row label.file-btn { background: var(--bg-elev); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; display: inline-block; }
+  .file-row label.file-btn:hover { background: var(--border); }
+  .helper-text { color: var(--text-dim); font-size: 12px; margin-top: 8px; }
+  .helper-text code { background: var(--bg-elev); padding: 1px 6px; border-radius: 3px; font-size: 11px; color: var(--green); }
+
+  .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; overflow: hidden; }
+  .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px; font-weight: 700; }
+  .stat-value { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.blue { color: var(--blue); }
+  .stat-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .stat-sub.green { color: var(--green); }
+  .stat-sub.red { color: var(--red); }
+
+  .section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+  .section-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .section-title { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); }
+  .section-sub { font-size: 12px; color: var(--text-dim); }
+  .section-body { padding: 0; }
+  .section-body.padded { padding: 16px; }
+  .section-body.scrollable { max-height: 600px; overflow-y: auto; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 8px 10px; background: var(--bg-elev); color: var(--text-dim); font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; position: sticky; top: 0; }
+  th:hover { color: var(--text); }
+  th .arrow { color: var(--green); margin-left: 4px; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: var(--bg-elev); }
+  tr:last-child td { border-bottom: none; }
+  td.mono, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td.right, th.right { text-align: right; }
+  .ticker { font-family: var(--mono); font-weight: 700; color: var(--text); font-size: 13px; }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--mono); }
+  .badge.green { background: rgba(45, 220, 122, 0.15); color: var(--green); }
+  .badge.red { background: rgba(255, 92, 92, 0.15); color: var(--red); }
+  .badge.amber { background: rgba(245, 185, 66, 0.15); color: var(--amber); }
+  .badge.orange { background: rgba(255, 159, 67, 0.15); color: var(--orange); }
+  .badge.blue { background: rgba(92, 184, 255, 0.15); color: var(--blue); }
+  .badge.purple { background: rgba(184, 138, 255, 0.15); color: var(--purple); }
+  .badge.teal { background: rgba(74, 217, 196, 0.15); color: var(--teal); }
+  .badge.gray { background: var(--bg-elev); color: var(--text-dim); }
+  .pnl-pos { color: var(--green); }
+  .pnl-neg { color: var(--red); }
+  .empty-state { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 14px; }
+  .empty-state code { background: var(--bg-elev); padding: 1px 6px; border-radius: 3px; color: var(--green); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 1000px) { .two-col { grid-template-columns: 1fr; } }
+
+  .score-bar { display: inline-block; width: 40px; height: 5px; background: var(--bg-elev); border-radius: 3px; overflow: hidden; margin-right: 5px; vertical-align: middle; }
+  .score-bar > div { height: 100%; }
+  .score-bar > div.green { background: var(--green); }
+  .score-bar > div.amber { background: var(--amber); }
+  .score-bar > div.red { background: var(--red); }
+
+  .alert { background: rgba(255, 92, 92, 0.08); border: 1px solid var(--red-dim); color: var(--red); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 12px; }
+  .alert.amber { background: rgba(245, 185, 66, 0.08); border-color: var(--amber-dim); color: var(--amber); }
+  .alert.green { background: rgba(45, 220, 122, 0.08); border-color: var(--green-dim); color: var(--green); }
+  .alert.blue { background: rgba(92, 184, 255, 0.08); border-color: rgba(92,184,255,0.3); color: var(--blue); }
+  .alert strong { font-weight: 700; }
+
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text); padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.2s; z-index: 100; max-width: 360px; }
+  .toast.show { opacity: 1; }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  .loader { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .bucket-card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .bucket-card.income { border-left: 3px solid var(--green); }
+  .bucket-card.cefs { border-left: 3px solid var(--amber); }
+  .bucket-card.preferred { border-left: 3px solid #d4a574; }
+  .bucket-card.growth { border-left: 3px solid var(--blue); }
+  .bucket-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .bucket-value { font-family: var(--mono); font-size: 24px; font-weight: 700; margin: 4px 0; }
+  .bucket-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 11px; }
+  .bucket-stats > div { color: var(--text-dim); }
+  .bucket-stats > div strong { color: var(--text); font-family: var(--mono); }
+
+  .input-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .input-group label { font-size: 12px; color: var(--text-dim); min-width: 180px; }
+  .input-group input[type=number] { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; font-family: var(--mono); font-size: 13px; width: 110px; text-align: right; outline: none; }
+  .input-group input[type=number]:focus { border-color: var(--green-dim); }
+  .input-group input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+
+  .scaling-table th, .scaling-table td { padding: 6px 10px; font-size: 12px; }
+  .scaling-table input { width: 80px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="brand-row">
+      <div class="brand-mark">TY</div>
+      <div>
+        <h1>Portfolio Command Center <span style="color:var(--text-dim); font-weight:400; font-size:16px;">v3</span></h1>
+        <div class="tagline">Drop .csv or .xlsx · Three-bucket split · Live quotes (4 sources, auto-failover) · Margin Tracker</div>
+      </div>
+    </div>
+    <div class="updated" id="updatedBar">No data loaded yet</div>
+  </div>
+  <div class="toolbar">
+    <button class="btn primary" id="refreshBtn">⟳ Refresh Quotes</button>
+    <!-- __refreshStopBtn: placeholder so JS getElementById finds an existing node;
+         the refresh loop re-creates and re-parents this element each tick. -->
+    <span id="__refreshStopBtn"></span>
+    <button class="btn" id="autoBtn">Auto-refresh: OFF</button>
+    <button class="btn" id="exportBtn">Export JSON</button>
+    <button class="btn" id="importBtn">Import JSON</button>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+    <button class="btn danger" id="clearBtn">Clear</button>
+    <a href="#suggestionsGrid" class="btn" style="text-decoration:none; background:var(--teal); color:var(--bg); font-weight:600;">🌱 Add Tickers</a>
+  </div>
+</header>
+
+<details class="input-section" open>
+  <summary>📋 Drop / Paste Robinhood data <span class="hint" id="parseStatus"></span></summary>
+  <div class="input-body">
+    <textarea class="paste-area" id="pasteBox" placeholder="Three ways to load:
+
+1. PASTE: Open Robinhood → Account → Positions → copy the table. Or grab a CSV export.
+
+2. UPLOAD CSV: Click 'Upload File' below — .csv from Robinhood's data export (stocks.csv, options.csv, crypto.csv, dividends.csv)
+
+3. UPLOAD XLSX: Click 'Upload File' — the .xlsx Activity Statement download (any tab: Activity, Equity Trades, Dividends, ACH all auto-detected).
+
+4. TYPE: Ticker, Shares, Cost. One per line. e.g.
+   TSII, 50, 25.00
+   NVII, 100, 28.50
+   HOOD, 25, 65.00"></textarea>
+    <div class="file-row">
+      <label class="file-btn" for="fileInput">📁 Upload File (.csv, .xlsx, .tsv)</label>
+      <input type="file" id="fileInput" accept=".csv,.tsv,.txt,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/tab-separated-values,text/plain">
+      <button class="btn primary" id="parseBtn">Parse &amp; Load</button>
+      <button class="btn" id="sampleBtn">Try Sample Data</button>
+      <button class="btn" id="loadEp18Btn">Load Ep 18 PDF Data</button>
+    </div>
+    <div class="helper-text">
+      Supported: Robinhood CSV exports (stocks/options/crypto/dividends), pasted positions table, manual ticker entry, and <strong>Robinhood .xlsx Activity Statement</strong> (auto-detects: Buy/Sell → positions + cost basis, ACH → deposits/withdrawals, CDIV/MDIV → dividends, MINT → margin interest, ROC → return-of-capital).
+      Live data: Yahoo Finance v8 chart, TTM dividend computed from event history.
+      Everything stays in your browser — no server, no API key, no signup.
+    </div>
+  </div>
+</details>
+
+<details class="input-section">
+  <summary>💲 Manual Prices <span class="hint" id="manualPriceStatus">paste current prices if Yahoo is blocked (mobile/phone)</span></summary>
+  <div class="input-body">
+    <textarea class="paste-area" id="manualPricesBox" style="min-height:80px;" placeholder="Format (one per line): TICKER=PRICE
+NVII=24.96
+TSII=17.64
+HOOY=29.86
+QQQI=56.14
+JEPQ=59.86
+..."></textarea>
+    <div class="file-row">
+      <button class="btn primary" id="applyManualPricesBtn">Apply Manual Prices</button>
+      <button class="btn" id="loadDemoPricesBtn">⚡ Load Demo Prices (2026-06-13)</button>
+      <button class="btn danger" id="clearManualPricesBtn">Clear Manual Prices</button>
+    </div>
+    <div class="helper-text">
+      Auto-failover across 5 sources: direct Yahoo q2 → q1 v8 → v7 → corsproxy.io → allorigins.
+      Plus Coinbase/CoinGecko for BTC/ETH. Manual paste below as last resort.
+      Demo prices load 2026-06-13 closing prices from my earlier probe — instant, offline.
+    </div>
+  </div>
+</details>
+
+<div id="alerts"></div>
+
+<div class="hero" id="hero">
+  <div class="stat"><div class="stat-label">Total Value</div><div class="stat-value" id="totalValue">—</div><div class="stat-sub" id="totalValueSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">Total Cost</div><div class="stat-value" id="totalCost">—</div><div class="stat-sub" id="totalCostSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">Unrealized P&L</div><div class="stat-value" id="totalPnL">—</div><div class="stat-sub" id="totalPnLSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">Daily</div><div class="stat-value green" id="dailyDiv">—</div><div class="stat-sub" id="dailyDivSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">Weekly</div><div class="stat-value green" id="weeklyDiv">—</div><div class="stat-sub" id="weeklyDivSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">Monthly</div><div class="stat-value green" id="monthlyDiv">—</div><div class="stat-sub" id="monthlyDivSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">Annual</div><div class="stat-value green" id="annualDiv">—</div><div class="stat-sub" id="annualDivSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">Blended Yield</div><div class="stat-value blue" id="avgYield">—</div><div class="stat-sub" id="avgYieldSub">&nbsp;</div></div>
+  <div class="stat"><div class="stat-label">NET % IN/OUT</div><div class="stat-value" id="netPct">—</div><div class="stat-sub" id="netPctSub">&nbsp;</div></div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🏷️ Three-Bucket Breakdown</div>
+      <div class="section-sub">Income / CEFs + Preferred / Growth — the Tactical Yield thesis in one view</div>
+    </div>
+  </div>
+  <div class="section-body padded" id="bucketGrid">
+    <div class="empty-state">Load positions to populate.</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">📊 Positions <span style="color:var(--text-dim); font-weight:400; font-size:11px;">— click headers to sort</span></div>
+      <div class="section-sub" id="positionsSub">—</div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="filterBox" placeholder="Filter ticker…" style="background:var(--bg-elev); color:var(--text); border:1px solid var(--border); padding:6px 10px; border-radius:6px; font-size:12px; outline:none; min-width:140px;">
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="table-wrap">
+      <table id="positionsTable">
+        <thead>
+          <tr>
+            <th data-sort="ticker">Ticker</th>
+            <th data-sort="manager" title="Fund issuer">Manager</th>
+            <th data-sort="bucket" title="Tactical Yield bucket">Bucket</th>
+            <th data-sort="payRate" title="Dividend payment frequency">Pay Rate</th>
+            <th class="right" data-sort="shares">Shares</th>
+            <th class="right" data-sort="cost" title="cost source">Avg Cost</th>
+            <th class="right" data-sort="price">Price</th>
+            <th class="right" data-sort="value">Mkt Value</th>
+            <th class="right" data-sort="pnlDollar">P&amp;L $</th>
+            <th class="right" data-sort="pnlPct">P&amp;L %</th>
+            <th class="right" data-sort="cumDiv" title="Cumulative dividends received">Cum Div</th>
+            <th class="right" data-sort="netGainLoss" title="P&L + cumulative dividends = true total return">NET $</th>
+            <th class="right" data-sort="netPosition" title="Cum div minus unrealized loss">Net Pos</th>
+            <th class="right" data-sort="ttmDiv" title="Trailing 12-month dividend per share">TTM $/sh</th>
+            <th class="right" data-sort="lastDiv" title="Most recent single dividend">Last $</th>
+            <th class="right" data-sort="yieldOnPrice">Yield</th>
+            <th class="right" data-sort="yieldToDate" title="Cum div / cost basis">YTD %</th>
+            <th class="right" data-sort="annualIncome">Annual $</th>
+            <th data-sort="score" title="Sustainability score">Sus</th>
+          </tr>
+        </thead>
+        <tbody id="positionsBody">
+          <tr><td colspan="19" class="empty-state">No positions loaded. Paste data, upload a <code>.csv</code> or <code>.xlsx</code>, or click <code>Try Sample Data</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">⚠️ High-Yield Watchlist</div>
+        <div class="section-sub">Positions with TTM yield ≥ 10%. Flagged by sustainability score.</div>
+      </div>
+    </div>
+    <div class="section-body padded" id="watchlist">
+      <div class="empty-state">Load positions to populate.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📈 Income Projection</div>
+        <div class="section-sub">If you hold current positions for 12 months at TTM pace.</div>
+      </div>
+    </div>
+    <div class="section-body padded" id="projection">
+      <div class="empty-state">Load positions to populate.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== $1K INJECTION SIMULATOR ============== -->
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">💸 Next $1K Injection Simulator</div>
+      <div class="section-sub">Drag the slider. Split across the NEOS §1256 suite. Watch the path to $2K/mo.</div>
+    </div>
+    <div class="toolbar">
+      <span class="mono" style="color:var(--text-dim); font-size:11px;">$</span>
+      <input type="range" id="injectAmount" min="100" max="5000" step="100" value="1000" style="width:160px; vertical-align:middle;">
+      <span class="mono" id="injectAmountLabel" style="font-weight:700; color:var(--green); font-size:14px; min-width:60px; display:inline-block;">$1,000</span>
+    </div>
+  </div>
+  <div class="section-body padded" id="injectGrid">
+    <div class="empty-state">Default NEOS §1256 plan loading…</div>
+  </div>
+</div>
+
+<!-- ============== NAV-DECAY-ADJUSTED YIELD (real yield) ============== -->
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🎯 NAV-Decay-Adjusted Yield</div>
+      <div class="section-sub">Real yield after subtracting the Return-of-Capital portion. HOOY/TSII/NVII look great on paper, less great here.</div>
+    </div>
+  </div>
+  <div class="section-body padded" id="realYieldGrid">
+    <div class="empty-state">Load positions to populate.</div>
+  </div>
+</div>
+
+<!-- ============== ROTAX MAP ============== -->
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">⚠️ Return-of-Capital (ROTax) Map</div>
+      <div class="section-sub">Positions where the dividend is paid from your own principal. Yields look great — the math doesn't lie, it just hides NAV decay.</div>
+    </div>
+  </div>
+  <div class="section-body padded" id="roTaxGrid">
+    <div class="empty-state">Load positions to populate.</div>
+  </div>
+</div>
+
+<!-- ============== GOAL PATH CHART ============== -->
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🎯 Goal Path: $2K/mo by [horizon]</div>
+      <div class="section-sub">Projected monthly income based on your ACH history + DRIP + price-flat assumption. Adjust the horizon below.</div>
+    </div>
+    <div class="toolbar">
+      <span class="mono" style="color:var(--text-dim); font-size:11px;">Horizon:</span>
+      <select id="goalHorizon" style="background:var(--bg-elev); color:var(--text); border:1px solid var(--border); padding:4px 8px; border-radius:4px; font-family:var(--mono);">
+        <option value="12">12 months</option>
+        <option value="24" selected>24 months</option>
+        <option value="36">36 months</option>
+        <option value="48">48 months</option>
+        <option value="60">60 months</option>
+      </select>
+    </div>
+  </div>
+  <div class="section-body padded" id="goalPathGrid">
+    <div class="empty-state">Load positions to populate.</div>
+  </div>
+</div>
+
+<!-- ============== NEW TICKER SUGGESTIONS ============== -->
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🌱 New Ticker Suggestions</div>
+      <div class="section-sub">High-yield CC ETFs you don't hold yet, scored on sustainability. Click "Add to Plan" to include in the $1K simulator.</div>
+    </div>
+    <div class="toolbar">
+      <span class="mono" style="color:var(--text-dim); font-size:11px;">Min score:</span>
+      <select id="suggMinScore" style="background:var(--bg-elev); color:var(--text); border:1px solid var(--border); padding:4px 8px; border-radius:4px; font-family:var(--mono);">
+        <option value="0">All</option>
+        <option value="40">40+</option>
+        <option value="60" selected>60+ (sustainable)</option>
+        <option value="80">80+ (NEOS sweet spot)</option>
+      </select>
+    </div>
+  </div>
+  <div class="section-body padded" id="suggestionsGrid">
+    <div class="empty-state">Loading candidate tickers…</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🎯 Future Income Goals</div>
+      <div class="section-sub">Per-position shares + cash needed to hit weekly income targets.</div>
+    </div>
+    <div class="toolbar">
+      <div class="input-group" style="margin:0;">
+        <label style="min-width:80px;">Target 1 $/wk:</label>
+        <input type="number" id="target1" value="250" min="50" step="50" style="width:80px; background:var(--bg-elev); color:var(--text); border:1px solid var(--border); padding:5px 8px; border-radius:4px; font-family:var(--mono); text-align:right; outline:none;">
+        <label style="min-width:80px;">Target 2 $/wk:</label>
+        <input type="number" id="target2" value="500" min="50" step="50" style="width:80px; background:var(--bg-elev); color:var(--text); border:1px solid var(--border); padding:5px 8px; border-radius:4px; font-family:var(--mono); text-align:right; outline:none;">
+      </div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="table-wrap">
+      <table id="goalsTable">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th class="right">Now $/wk</th>
+            <th class="right">Now Ratio</th>
+            <th class="right">T1 Future</th>
+            <th class="right">T1 Shares</th>
+            <th class="right">T1 Cash</th>
+            <th class="right">T2 Future</th>
+            <th class="right">T2 Shares</th>
+            <th class="right">T2 Cash</th>
+          </tr>
+        </thead>
+        <tbody id="goalsBody">
+          <tr><td colspan="9" class="empty-state">Load positions to populate.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">💸 Margin Dividend Tracker</div>
+      <div class="section-sub">56-week rolling forecast. Edit inputs below to model margin + paycheck scenarios.</div>
+    </div>
+  </div>
+  <div class="section-body padded">
+    <div class="input-group">
+      <label>Starting Cash Balance $</label>
+      <input type="number" id="mStartCash" value="30000" step="500">
+    </div>
+    <div class="input-group">
+      <label>Starting Margin Borrowed $</label>
+      <input type="number" id="mStartMargin" value="0" step="500">
+    </div>
+    <div class="input-group">
+      <label>Avg Weekly Yield (decimal, e.g. 0.0042)</label>
+      <input type="number" id="mWeeklyYield" value="0.0042" step="0.0001">
+    </div>
+    <div class="input-group">
+      <label>Annual Margin Interest Rate</label>
+      <input type="number" id="mMarginRate" value="0.055" step="0.005">
+    </div>
+    <div class="input-group">
+      <label>Bi-weekly Paycheck Deposit $</label>
+      <input type="number" id="mPaycheck" value="1000" step="100">
+    </div>
+    <div class="input-group">
+      <label>Bi-weekly Bills Paid $</label>
+      <input type="number" id="mBills" value="800" step="100">
+    </div>
+    <div class="input-group">
+      <label>Reinvest Net Dividends?</label>
+      <input type="checkbox" id="mReinvest" checked>
+    </div>
+    <div style="overflow-x:auto; margin-top:14px;">
+      <table class="scaling-table" id="marginTable">
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th class="right">Portfolio Value</th>
+            <th class="right">Margin Debt</th>
+            <th class="right">Wkly Div Income</th>
+            <th class="right">Wkly Interest</th>
+            <th class="right">Net Div Cash</th>
+            <th class="right">Bi-weekly Inj</th>
+            <th class="right">Net Cash Avail</th>
+            <th class="right">Reinvested</th>
+          </tr>
+        </thead>
+        <tbody id="marginBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">💰 ACH + Capital Tracking</div>
+      <div class="section-sub">Drop transactions CSV to populate, or enter totals manually. NET % IN/OUT = (deposits − withdrawals) / current value.</div>
+    </div>
+  </div>
+  <div class="section-body padded">
+    <div class="input-group">
+      <label>Total Deposits $</label>
+      <input type="number" id="achDeposit" value="0" step="100">
+    </div>
+    <div class="input-group">
+      <label>Total Withdrawals $</label>
+      <input type="number" id="achWithdrawal" value="0" step="100">
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-top:14px;">
+      <div>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">NET $ IN/OUT</div>
+        <div class="mono" id="achNetDollar" style="font-size:20px; font-weight:700;">—</div>
+      </div>
+      <div>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">NET % IN/OUT</div>
+        <div class="mono" id="achNetPct" style="font-size:20px; font-weight:700;">—</div>
+        <div style="font-size:10px; color:var(--text-faint); margin-top:2px;">vs current portfolio value</div>
+      </div>
+      <div>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">Leverage Ratio</div>
+        <div class="mono" id="leverageRatio" style="font-size:20px; font-weight:700;">—</div>
+        <div style="font-size:10px; color:var(--text-faint); margin-top:2px;">cost − NET = margin used</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">📐 Scaling Table</div>
+      <div class="section-sub">If you invest $X/wk at the current blended weekly yield, here's what you earn.</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <table class="scaling-table" id="scalingTable">
+      <thead>
+        <tr>
+          <th class="right">Weekly $</th>
+          <th class="right">Annual Contribution</th>
+          <th class="right">Year 1 Div Income</th>
+          <th class="right">Year 5 Compounded</th>
+          <th class="right">Monthly @ Yr 1</th>
+        </tr>
+      </thead>
+      <tbody id="scalingBody">
+        <tr><td colspan="5" class="empty-state">Load positions to compute blended yield.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🏗️ By Structure</div>
+      <div class="section-sub">Tax + yield breakdown by wrapper. Section 1256 (NEOS) preferred. REX/YieldMax 100% ROC flagged.</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="table-wrap">
+      <table id="classTable">
+        <thead>
+          <tr>
+            <th>Structure</th>
+            <th class="right">Positions</th>
+            <th class="right">Cost</th>
+            <th class="right">Value</th>
+            <th class="right">P&amp;L</th>
+            <th class="right">Annual $</th>
+            <th class="right">Daily $</th>
+            <th class="right">Weekly $</th>
+            <th class="right">Monthly $</th>
+            <th class="right">Yield (cost)</th>
+            <th class="right">Yield (price)</th>
+          </tr>
+        </thead>
+        <tbody id="classBody">
+          <tr><td colspan="11" class="empty-state">Load positions to populate.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">📅 Dividends Received</div>
+      <div class="section-sub">CDIV + MDIV from your .xlsx, or Robinhood's dividends.csv.</div>
+    </div>
+  </div>
+  <div class="section-body scrollable">
+    <table id="divTable">
+      <thead>
+        <tr>
+          <th>Pay Date</th>
+          <th>Ticker</th>
+          <th>Type</th>
+          <th class="right">Amount</th>
+        </tr>
+      </thead>
+      <tbody id="divBody">
+        <tr><td colspan="4" class="empty-state">No dividend transactions loaded. Upload Robinhood's <code>dividends.csv</code> or <code>.xlsx</code> Activity Statement.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer style="text-align:center; color:var(--text-faint); font-size:11px; padding:20px 0 0;">
+  <div>Tactical Yield — Portfolio Command Center v3 · 100% client-side · data never leaves your browser</div>
+  <div style="margin-top:4px;">Not financial advice. Built for tracking, not for trading decisions. Verify all numbers with your broker before acting.</div>
+</footer>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// ROBINHOOD PORTFOLIO COMMAND CENTER v3
+// Adds: .xlsx support (SheetJS), auto-detect trades/ACH/divs/ROC/MINT
+// ============================================================
+
+// ---------- ASSET CLASS DATABASE ----------
+const KNOWN_FUNDS = {
+  'QQQI':  { class: '1256-cc',  bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Nasdaq-100 High Income',     taxNote: '60/40 §1256' },
+  'XQQI':  { class: '1256-cc',  bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Nasdaq 100 Hedged',          taxNote: '60/40 §1256' },
+  'IWMI':  { class: '1256-cc',  bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Russell 2000 High Income',   taxNote: '60/40 §1256' },
+  'IAUI':  { class: '1256-cc',  bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Gold High Income',           taxNote: '60/40 §1256' },
+  'SPYI':  { class: '1256-cc',  bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS S&P 500 High Income',        taxNote: '60/40 §1256' },
+  'BITY':  { class: '1256-cc',  bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Bitcoin High Income',        taxNote: '60/40 §1256' },
+  'GPTY':  { class: '1256-cc',  bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS AI Hedged High Income',      taxNote: '60/40 §1256' },
+  // NEOS — full lineup, including newer launches (June 2026)
+  'ETHI':  { class: 'cc-crypto', bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Ethereum High Income',       taxNote: '§1256 preferred' },
+  'SOLI':  { class: 'cc-crypto', bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Solana High Income',         taxNote: '§1256 preferred' },
+  'COII':  { class: 'cc-crypto', bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Coinbase High Income',       taxNote: '§1256 preferred' },
+  'MSTI':  { class: 'cc-crypto', bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS MicroStrategy High Income',  taxNote: '§1256 preferred' },
+  'HOII':  { class: '1256-cc',   bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS HOOD High Income',           taxNote: '60/40 §1256' },
+  'PLTI':  { class: '1256-cc',   bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS PLTR High Income',           taxNote: '60/40 §1256' },
+  'TSMI':  { class: '1256-cc',   bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS TSM High Income',            taxNote: '60/40 §1256' },
+  'AVII':  { class: '1256-cc',   bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS AVGO High Income',           taxNote: '60/40 §1256' },
+  'JEPQ':  { class: 'cc-monthly', bucket: 'income', manager: 'JPMorgan',  payRate: 'Monthly',   name: 'JPMorgan Nasdaq Equity Premium',  taxNote: 'Reg C-corp' },
+  'JEPI':  { class: 'cc-monthly', bucket: 'income', manager: 'JPMorgan',  payRate: 'Monthly',   name: 'JPMorgan Equity Premium Income',  taxNote: 'Reg C-corp' },
+  'DIVO':  { class: 'cc-monthly', bucket: 'income', manager: 'Amplify',   payRate: 'Monthly',   name: 'Amplify CWP Enhanced Dividend',   taxNote: 'Reg C-corp' },
+  'SPHD':  { class: 'low-vol',   bucket: 'income',   manager: 'Invesco',   payRate: 'Monthly',   name: 'Invesco S&P 500 High Div Low Vol', taxNote: 'Reg C-corp' },
+  'HDV':   { class: 'low-vol',   bucket: 'income',   manager: 'iShares',   payRate: 'Quarterly', name: 'iShares Core High Dividend',     taxNote: 'Reg C-corp' },
+  'BTCI':  { class: 'cc-crypto', bucket: 'income',   manager: 'NEOS',      payRate: 'Monthly',   name: 'NEOS Bitcoin High Income',        taxNote: '§1256 preferred' },
+  'QDTE':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill Innovation-100 0DTE',  taxNote: 'Reg C-corp, 0DTE covered call' },
+  'TSI':   { class: 'cef',       bucket: 'cef',      manager: 'Strategy',  payRate: 'Monthly',   name: 'TSI - MLP & Energy Strategy',     taxNote: 'CEF, K-1 may apply' },
+  'MBI':   { class: 'cef',       bucket: 'cef',      manager: 'Nuveen',    payRate: 'Monthly',   name: 'Nuveen MBIA Municipal',           taxNote: 'CEF, tax-exempt' },
+  'NUV':   { class: 'cef',       bucket: 'cef',      manager: 'Nuveen',    payRate: 'Monthly',   name: 'Nuveen Municipal Value',         taxNote: 'CEF, tax-exempt' },
+  'NVI':   { class: 'cef',       bucket: 'cef',      manager: 'Nuveen',    payRate: 'Monthly',   name: 'Nuveen Municipal Value 2',        taxNote: 'CEF, tax-exempt' },
+  'NVG':   { class: 'cef',       bucket: 'cef',      manager: 'Nuveen',    payRate: 'Monthly',   name: 'Nuveen AMT-Free Municipal',       taxNote: 'CEF, tax-exempt' },
+  'WP':    { class: 'cef',       bucket: 'cef',      manager: 'Western',   payRate: 'Monthly',   name: 'Western Asset High Income',      taxNote: 'CEF, leverage' },
+  'CRF':   { class: 'cef',       bucket: 'cef',      manager: 'Cornerstone', payRate: 'Monthly', name: 'Cornerstone Total Return',       taxNote: '⚠ CEF, return-of-capital' },
+  'CLM':   { class: 'cef',       bucket: 'cef',      manager: 'Cornerstone', payRate: 'Monthly', name: 'Cornerstone Strategic Investment', taxNote: '⚠ CEF, return-of-capital' },
+  'MAGY':  { class: 'cef',       bucket: 'cef',      manager: 'Moors',     payRate: 'Monthly',   name: 'Moors & Cabot High Yield',       taxNote: '⚠ CEF, monthly' },
+  'TOPW':  { class: 'cef',       bucket: 'cef',      manager: 'Roundhill', payRate: 'Weekly',    name: 'Roundhill Top WeeklyPay ETF',    taxNote: 'CEF, weekly' },
+  'TSII':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX TSLA Growth & Income ETF',    taxNote: '§1256 + C-corp wrapper' },
+  'NVII':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX NVDA Growth & Income ETF',    taxNote: '§1256 + C-corp wrapper' },
+  'MSII':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX MSFT Growth & Income ETF',    taxNote: '§1256 + C-corp wrapper' },
+  'GOOI':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX Google Growth & Income',      taxNote: '§1256 + C-corp wrapper' },
+  'METI':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX META Growth & Income',        taxNote: '§1256 + C-corp wrapper' },
+  'AMZI':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX AMZN Growth & Income',        taxNote: '§1256 + C-corp wrapper' },
+  'FEPI':  { class: 'rex-roc',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX FANG & Innovation Equity',    taxNote: '⚠ 100% ROC trap' },
+  'AIPI':  { class: 'rex-roc',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX AI Equity Premium',           taxNote: '⚠ 100% ROC trap' },
+  'CEPI':  { class: 'rex-roc',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX Crypto Equity Premium',       taxNote: '⚠ 100% ROC trap' },
+  'YMAX':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax Universe Funds',         taxNote: '⚠ C-corp, 100% ROC' },
+  'TSLY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax TSLA Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'NVDY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax NVDA Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'OARK':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax MSFT Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'APLY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax AAPL Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'HOOY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax HOOD Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'CONY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax COIN Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'MSTY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax MSTR Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'AMZY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax AMZN Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'NFLY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax NFLX Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'GOOY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax GOOGL Option Income',    taxNote: '⚠ C-corp, 100% ROC' },
+  'FBY':   { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax META Option Income',     taxNote: '⚠ C-corp, 100% ROC' },
+  'DIPS':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax Short TSLA Option',      taxNote: '⚠ C-corp, 100% ROC' },
+  'GDXY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax Gold Miners Option',     taxNote: '⚠ C-corp, 100% ROC' },
+  // YieldMax — extended family (June 2026 lineup, not in original 18 holdings)
+  'TSMZ':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax TSLA 2X Option Income', taxNote: '⚠ C-corp, 100% ROC' },
+  'MSFO':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax MSFT 2X Option Income', taxNote: '⚠ C-corp, 100% ROC' },
+  'SOXS':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax Semiconductor -1X',     taxNote: '⚠ C-corp, 100% ROC' },
+  'CRSH':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax MSTR Short',            taxNote: '⚠ C-corp, 100% ROC' },
+  'BABO':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax BABA Option Income',    taxNote: '⚠ C-corp, 100% ROC' },
+  'PLTY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax PLTR Option Income',    taxNote: '⚠ C-corp, 100% ROC' },
+  'TSLY2': { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax Tesla 2X Option Income',taxNote: '⚠ C-corp, 100% ROC' },
+  'SMCX':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax SMCI Option Income',    taxNote: '⚠ C-corp, 100% ROC' },
+  'NVDX':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax NVDA 2X Option Income', taxNote: '⚠ C-corp, 100% ROC' },
+  'TSLX':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax TSLA 2X (alt)',          taxNote: '⚠ C-corp, 100% ROC' },
+  'AIYY':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax AI 2X Option Income',   taxNote: '⚠ C-corp, 100% ROC' },
+  'YETH':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax Ethereum Option Income',taxNote: '⚠ C-corp, 100% ROC' },
+  'YBTC':  { class: 'yieldmax',  bucket: 'income',   manager: 'YieldMax',  payRate: 'Weekly',    name: 'YieldMax Bitcoin Option Income', taxNote: '⚠ C-corp, 100% ROC' },
+  // REX — extended single-stock line (June 2026 lineup)
+  'AAPU':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX AAPL Growth & Income',       taxNote: '§1256 + C-corp wrapper' },
+  'AMZU':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX Amazon Growth & Income',     taxNote: '§1256 + C-corp wrapper' },
+  'BABU':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX BABA Growth & Income',       taxNote: '§1256 + C-corp wrapper' },
+  'COIU':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX COIN Growth & Income',       taxNote: '§1256 + C-corp wrapper' },
+  'MSFU':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX MSFT Growth & Income',       taxNote: '§1256 + C-corp wrapper' },
+  'PLTU':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX PLTR Growth & Income',       taxNote: '§1256 + C-corp wrapper' },
+  'MSTRU': { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX MSTR Growth & Income',       taxNote: '§1256 + C-corp wrapper' },
+  'NFLU':  { class: 'rex-cef',   bucket: 'income',   manager: 'REX',       payRate: 'Weekly',    name: 'REX NFLX Growth & Income',       taxNote: '§1256 + C-corp wrapper' },
+  // TappAlpha — full daily-income lineup
+  'TDAQ':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Innovation 100 Daily Income', taxNote: 'Reg C-corp, daily' },
+  'TDSB':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Daily Income Buffer',  taxNote: 'Reg C-corp, daily' },
+  'TDSC':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Daily Income Core',    taxNote: 'Reg C-corp, daily' },
+  'TDSD':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Daily Income Dynamic', taxNote: 'Reg C-corp, daily' },
+  'TDSE':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Daily Income Edge',    taxNote: 'Reg C-corp, daily' },
+  'TDSI':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Daily Income Innov',   taxNote: 'Reg C-corp, daily' },
+  'TDSL':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Daily Income Ladder',  taxNote: 'Reg C-corp, daily' },
+  'TDSM':  { class: 'cc-monthly', bucket: 'income',  manager: 'TappAlpha', payRate: 'Monthly',   name: 'TappAlpha Daily Income Max',     taxNote: 'Reg C-corp, daily' },
+  // Roundhill — full suite (0DTE, weekly, monthly)
+  'QDTE':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill Innovation-100 0DTE',  taxNote: 'Reg C-corp, 0DTE covered call' },
+  'XDTE':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill S&P 500 0DTE',         taxNote: 'Reg C-corp, 0DTE covered call' },
+  'RDTE':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill Russell 2000 0DTE',    taxNote: 'Reg C-corp, 0DTE covered call' },
+  'NDTE':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill Nanotechnology 0DTE', taxNote: 'Reg C-corp, 0DTE covered call' },
+  'METD':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill Meta 0DTE',            taxNote: 'Reg C-corp, 0DTE covered call' },
+  'AAPD':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill AAPL Weekly',          taxNote: 'Reg C-corp' },
+  'TSLD':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill TSLA Weekly',          taxNote: 'Reg C-corp' },
+  'NVDD':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill NVDA Daily',           taxNote: 'Reg C-corp' },
+  'TOPY':  { class: 'cc-monthly', bucket: 'income',  manager: 'Roundhill', payRate: 'Monthly',   name: 'Roundhill Top MonthlyPay',       taxNote: 'Reg C-corp' },
+  // Defiance ETFs (other leveraged, not MSTR-only)
+  'TSLA':  { class: 'stock',     bucket: 'growth',   manager: 'Tesla',     payRate: 'N/A',       name: 'Tesla',                           taxNote: 'Equity' },
+  'NVDA':  { class: 'stock',     bucket: 'growth',   manager: 'Nvidia',    payRate: 'Quarterly', name: 'Nvidia',                          taxNote: 'Equity' },
+  'HOOD':  { class: 'stock',     bucket: 'growth',   manager: 'HOOD',      payRate: 'N/A',       name: 'Robinhood Markets',               taxNote: 'Equity' },
+  'AAPL':  { class: 'stock',     bucket: 'growth',   manager: 'AAPL',      payRate: 'Quarterly', name: 'Apple',                           taxNote: 'Equity' },
+  'MSFT':  { class: 'stock',     bucket: 'growth',   manager: 'MSFT',      payRate: 'Quarterly', name: 'Microsoft',                       taxNote: 'Equity' },
+  'AMZN':  { class: 'stock',     bucket: 'growth',   manager: 'AMZN',      payRate: 'N/A',       name: 'Amazon',                          taxNote: 'Equity' },
+  'META':  { class: 'stock',     bucket: 'growth',   manager: 'META',      payRate: 'Quarterly', name: 'Meta Platforms',                  taxNote: 'Equity' },
+  'GOOGL': { class: 'stock',     bucket: 'growth',   manager: 'GOOGL',     payRate: 'N/A',       name: 'Alphabet',                        taxNote: 'Equity' },
+  'SPY':   { class: 'index',     bucket: 'growth',   manager: 'SPDR',      payRate: 'Quarterly', name: 'SPDR S&P 500',                    taxNote: 'Index' },
+  'QQQ':   { class: 'index',     bucket: 'growth',   manager: 'Invesco',   payRate: 'Quarterly', name: 'Invesco QQQ',                     taxNote: 'Index' },
+  'MRVL':  { class: 'stock',     bucket: 'growth',   manager: 'MRVL',      payRate: 'Quarterly', name: 'Marvell Technology',              taxNote: 'Equity' },
+  'AVGO':  { class: 'stock',     bucket: 'growth',   manager: 'AVGO',      payRate: 'Quarterly', name: 'Broadcom',                        taxNote: 'Equity' },
+  'ALAB':  { class: 'stock',     bucket: 'growth',   manager: 'ALAB',      payRate: 'N/A',       name: 'Astera Labs',                     taxNote: 'Equity' },
+  'BTC':   { class: 'crypto',    bucket: 'growth',   manager: 'BTC',       payRate: 'N/A',       name: 'Bitcoin',                         taxNote: 'Crypto, prop tax' },
+  'ETH':   { class: 'crypto',    bucket: 'growth',   manager: 'ETH',       payRate: 'N/A',       name: 'Ethereum',                        taxNote: 'Crypto, prop tax' },
+  'STRC':  { class: 'preferred', bucket: 'preferred', manager: 'Strategy',  payRate: 'Monthly',   name: 'Strategy Perpetual Stretch Pref', taxNote: 'Preferred, fixed' },
+  'SATA':  { class: 'preferred', bucket: 'preferred', manager: 'Strive',    payRate: 'Monthly',   name: 'Strive Variable Rate Pref',       taxNote: 'Preferred, fixed' },
+  'SPCX':  { class: 'stock',     bucket: 'growth',   manager: 'SpaceX',    payRate: 'N/A',       name: 'SpaceX (private)',                taxNote: 'Equity' },
+  'MSTX':  { class: 'cc-crypto', bucket: 'growth',   manager: 'Defiance',  payRate: 'N/A',       name: 'Defiance Leveraged Long MSTR',   taxNote: 'Leveraged, not income' },
+  'BITU':  { class: 'cc-crypto', bucket: 'growth',   manager: 'Bitwise',   payRate: 'N/A',       name: 'Bitwise Bitcoin ETP',            taxNote: 'Spot, not income' },
+  'FIAT':  { class: 'cash',      bucket: 'income',   manager: 'USD',       payRate: 'N/A',       name: 'Cash / FIAT',                    taxNote: 'Cash' },
+};
+
+const CLASS_LABELS = {
+  '1256-cc':    { label: '§1256 CC',  color: 'green' },
+  'rex-cef':    { label: 'REX §1256', color: 'amber' },
+  'rex-roc':    { label: 'REX ROC',   color: 'red' },
+  'yieldmax':   { label: 'YieldMax',  color: 'red' },
+  'cc-monthly': { label: 'CC Mo.',    color: 'green' },
+  'cc-crypto':  { label: 'CC Crypto', color: 'blue' },
+  'low-vol':    { label: 'Low Vol',   color: 'green' },
+  'cef':        { label: 'CEF',       color: 'amber' },
+  'preferred':  { label: 'Preferred', color: 'orange' },
+  'stock':      { label: 'Stock',     color: 'gray' },
+  'index':      { label: 'Index',     color: 'gray' },
+  'crypto':     { label: 'Crypto',    color: 'purple' },
+  'cash':       { label: 'Cash',      color: 'gray' },
+  'unknown':    { label: '—',         color: 'gray' },
+};
+
+const BUCKET_LABELS = {
+  'income':    { label: 'Income',    color: 'green' },
+  'cef':       { label: 'CEFs',      color: 'amber' },
+  'preferred': { label: 'Preferred', color: 'orange' },
+  'growth':    { label: 'Growth',    color: 'blue' },
+  'unknown':   { label: '—',         color: 'gray' },
+};
+
+const PAY_RATE_PERIODS = {
+  'Daily': 365, 'Weekly': 52, 'Bi-weekly': 26, 'Monthly': 12, 'Quarterly': 4, 'Annually': 1, 'N/A': 0,
+};
+
+const STORAGE_KEY = 'rh_dashboard_v3';
+const QUOTES_CACHE_KEY = 'rh_quotes_cache_v3';
+const QUOTES_TTL_MS = 5 * 60 * 1000;
+
+let state = {
+  positions: [],
+  dividends: [],
+  raw: '',
+  lastQuotesAt: 0,
+  loading: false,
+  autoRefresh: false,
+  autoTimer: null,
+  sortCol: 'value',
+  sortAsc: false,
+  filter: '',
+  achDeposit: 0,
+  achWithdrawal: 0,
+  m: { startCash: 30000, startMargin: 0, weeklyYield: 0.0042, marginRate: 0.055, paycheck: 1000, bills: 800, reinvest: true },
+  target1: 250,
+  target2: 500,
+  marginInterestYTD: 0,
+  returnOfCapitalYTD: 0,
+  stockLendingYTD: 0,
+};
+
+let sheetJSLoaded = false;
+let sheetJSLoading = null;
+
+function loadSheetJS() {
+  if (sheetJSLoaded) return Promise.resolve();
+  if (sheetJSLoading) return sheetJSLoading;
+  sheetJSLoading = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    script.onload = () => { sheetJSLoaded = true; resolve(); };
+    script.onerror = () => reject(new Error('Failed to load SheetJS from CDN'));
+    document.head.appendChild(script);
+  });
+  return sheetJSLoading;
+}
+
+// ============================================================
+// PERSISTENCE
+// ============================================================
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      raw: state.raw,
+      positions: state.positions,
+      dividends: state.dividends,
+      sortCol: state.sortCol,
+      sortAsc: state.sortAsc,
+      achDeposit: state.achDeposit,
+      achWithdrawal: state.achWithdrawal,
+      m: state.m,
+      target1: state.target1,
+      target2: state.target2,
+      marginInterestYTD: state.marginInterestYTD,
+      returnOfCapitalYTD: state.returnOfCapitalYTD,
+      stockLendingYTD: state.stockLendingYTD,
+    }));
+  } catch (e) { console.warn('saveState failed', e); }
+}
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const data = JSON.parse(s);
+      state.raw = data.raw || '';
+      state.positions = data.positions || [];
+      state.dividends = data.dividends || [];
+      state.sortCol = data.sortCol || 'value';
+      state.sortAsc = data.sortAsc !== undefined ? data.sortAsc : false;
+      state.achDeposit = data.achDeposit || 0;
+      state.achWithdrawal = data.achWithdrawal || 0;
+      state.m = Object.assign(state.m, data.m || {});
+      state.target1 = data.target1 || 250;
+      state.target2 = data.target2 || 500;
+      state.marginInterestYTD = data.marginInterestYTD || 0;
+      state.returnOfCapitalYTD = data.returnOfCapitalYTD || 0;
+      state.stockLendingYTD = data.stockLendingYTD || 0;
+      document.getElementById('pasteBox').value = state.raw;
+      document.getElementById('achDeposit').value = state.achDeposit || 0;
+      document.getElementById('achWithdrawal').value = state.achWithdrawal || 0;
+      document.getElementById('mStartCash').value = state.m.startCash;
+      document.getElementById('mStartMargin').value = state.m.startMargin;
+      document.getElementById('mWeeklyYield').value = state.m.weeklyYield;
+      document.getElementById('mMarginRate').value = state.m.marginRate;
+      document.getElementById('mPaycheck').value = state.m.paycheck;
+      document.getElementById('mBills').value = state.m.bills;
+      document.getElementById('mReinvest').checked = !!state.m.reinvest;
+      document.getElementById('target1').value = state.target1;
+      document.getElementById('target2').value = state.target2;
+    }
+  } catch (e) { console.warn('loadState failed', e); }
+}
+
+function saveQuotesCache() {
+  const map = {};
+  state.positions.forEach(p => { if (p._quote) map[p.ticker] = p._quote; });
+  try { localStorage.setItem(QUOTES_CACHE_KEY, JSON.stringify({ at: Date.now(), map })); } catch (e) {}
+}
+function loadQuotesCache() {
+  try {
+    const s = localStorage.getItem(QUOTES_CACHE_KEY);
+    if (!s) return null;
+    const cache = JSON.parse(s);
+    if (Date.now() - cache.at > QUOTES_TTL_MS * 4) return null;
+    return cache;
+  } catch (e) { return null; }
+}
+
+// ============================================================
+// PARSERS — CSV / TSV / SIMPLE LIST
+// ============================================================
+function parseInput(text) {
+  text = text.trim();
+  if (!text) return { positions: [], dividends: [], kind: 'empty' };
+  // Detect XLSX/Activity format FIRST: has "Trans Code" or "Transaction Code" header.
+  // Use the robust parser which respects RFC 4180 quoting (embedded newlines in
+  // quoted description fields stay inside the field, don't break the row).
+  const firstNewline = text.indexOf('\n');
+  const firstLine = firstNewline === -1 ? text : text.slice(0, firstNewline);
+  const hdr = firstLine.toLowerCase();
+  if (hdr.includes('trans code') || hdr.includes('transaction code')) {
+    const rows = parseCsvRobust(text);
+    // Coerce all cells to strings
+    const cleaned = rows.map(r => (r || []).map(c => c == null ? '' : String(c)));
+    return { ...parseActivityRows(cleaned), kind: 'xlsx' };
+  }
+  // Other formats: parse lines normally
+  const lines = text.split(/\r?\n/).map(l => l.replace(/\r/g, '').trim()).filter(Boolean);
+  if (lines.length === 0) return { positions: [], dividends: [], kind: 'empty' };
+  if (hdr.includes('record date') || (hdr.includes('pay date') && hdr.includes('symbol'))) {
+    return { ...parseDividendsCsv(lines), kind: 'dividends' };
+  }
+  const firstLineCols = splitLine(lines[0]);
+  if (firstLineCols.length >= 3) {
+    const cols = firstLineCols.map(c => c.toLowerCase().trim());
+    if (cols.some(c => /symbol|ticker|stock|coin/.test(c))) return { ...parsePositionsCsv(lines), kind: 'positions' };
+  }
+  if (firstLineCols.length >= 3 && lines[0].includes('\t')) return { ...parsePositionsCsv(lines), kind: 'positions' };
+  return { ...parseSimpleList(lines), kind: 'simple' };
+}
+
+function splitLine(line) {
+  if (line.includes('\t')) return line.split('\t').map(c => c.trim());
+  const out = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === ',' && !inQ) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map(c => c.trim());
+}
+
+// Parse CSV with proper handling of embedded newlines in quoted fields.
+// RFC 4180: a newline inside a quoted field is part of the field.
+// We scan the full text and only split rows on newlines outside quotes.
+function parseCsvRobust(text) {
+  const rows = [];
+  let row = [];
+  let cur = '';
+  let inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      // Doubled "" inside quoted field = literal quote
+      if (inQuote && text[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuote = !inQuote;
+      }
+      continue;
+    }
+    if (ch === ',' && !inQuote) {
+      row.push(cur);
+      cur = '';
+      continue;
+    }
+    if ((ch === '\n' || ch === '\r') && !inQuote) {
+      row.push(cur);
+      rows.push(row);
+      row = [];
+      cur = '';
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur.length > 0 || row.length > 0) {
+    row.push(cur);
+    rows.push(row);
+  }
+  return rows.filter(r => r.length > 0 && r.some(c => c.length > 0));
+}
+
+function parsePositionsCsv(lines) {
+  const cols = splitLine(lines[0]).map(c => c.toLowerCase().trim());
+  const idx = {
+    ticker: findCol(cols, ['symbol', 'ticker', 'instrument', 'stock', 'coin', 'security']),
+    name:   findCol(cols, ['name', 'description', 'security description', 'fund manager']),
+    shares: findCol(cols, ['quantity', 'shares', 'qty', 'units']),
+    cost:   findCol(cols, ['average cost', 'avg cost', 'cost basis', 'cost', 'price', 'purchase price']),
+    total:  findCol(cols, ['total cost', 'total', 'cost basis total', 'amount']),
+    price:  findCol(cols, ['current price', 'last price', 'price', 'mark', 'last']),
+    value:  findCol(cols, ['market value', 'value', 'equity', 'current value', 'total value']),
+  };
+  const positions = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = splitLine(lines[i]);
+    const ticker = (idx.ticker !== -1 ? c[idx.ticker] : c[0] || '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
+    if (!ticker || ticker.length > 6) continue;
+    let shares = idx.shares !== -1 ? parseNum(c[idx.shares]) : null;
+    let cost = idx.cost !== -1 ? parseNum(c[idx.cost]) : null;
+    let total = idx.total !== -1 ? parseNum(c[idx.total]) : null;
+    let price = idx.price !== -1 ? parseNum(c[idx.price]) : null;
+    let value = idx.value !== -1 ? parseNum(c[idx.value]) : null;
+    let name = idx.name !== -1 ? c[idx.name] : '';
+    if (cost === null && total !== null && shares) cost = total / shares;
+    if (shares === null && cost && total) shares = total / cost;
+    if (value === null && shares && price) value = shares * price;
+    if (price === null && value && shares) price = value / shares;
+    if (cost === null && price) cost = price;
+    if (!shares || shares <= 0) continue;
+    if (!cost || cost <= 0) cost = price || 0;
+    positions.push({ ticker, name, shares, cost, price, value, costSource: 'manual' });
+  }
+  return { positions, dividends: [] };
+}
+
+function parseSimpleList(lines) {
+  const positions = [];
+  for (const line of lines) {
+    const c = splitLine(line);
+    if (c.length < 2) continue;
+    const ticker = c[0].toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
+    if (!ticker || ticker.length > 6) continue;
+    const shares = parseNum(c[1]);
+    const cost = c.length >= 3 ? parseNum(c[2]) : null;
+    if (!shares) continue;
+    positions.push({ ticker, name: '', shares, cost: cost || 0, price: null, value: null, costSource: 'manual' });
+  }
+  return { positions, dividends: [] };
+}
+
+function parseDividendsCsv(lines) {
+  const cols = splitLine(lines[0]).map(c => c.toLowerCase().trim());
+  const idx = {
+    payDate:    findCol(cols, ['pay date', 'payment date', 'date', 'paid']),
+    recordDate: findCol(cols, ['record date']),
+    ticker:     findCol(cols, ['symbol', 'ticker', 'instrument']),
+    amount:     findCol(cols, ['amount', 'total', 'dividend']),
+    type:       findCol(cols, ['type', 'description', 'category']),
+  };
+  const dividends = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = splitLine(lines[i]);
+    const ticker = (idx.ticker !== -1 ? c[idx.ticker] : '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
+    const amount = idx.amount !== -1 ? parseNum(c[idx.amount]) : 0;
+    const date = idx.payDate !== -1 ? c[idx.payDate] : (idx.recordDate !== -1 ? c[idx.recordDate] : '');
+    const type = idx.type !== -1 ? c[idx.type] : '';
+    if (!ticker || !amount) continue;
+    dividends.push({ date, ticker, amount, type });
+  }
+  return { positions: [], dividends };
+}
+
+function findCol(cols, names) {
+  for (const n of names) {
+    const i = cols.findIndex(c => c === n || c.includes(n));
+    if (i !== -1) return i;
+  }
+  return -1;
+}
+
+function parseNum(s) {
+  if (s === null || s === undefined) return null;
+  s = String(s).replace(/[$,%\s]/g, '').replace(/[()]/g, m => m === '(' ? '-' : '');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// ============================================================
+// XLSX PARSER — auto-detect Activity Statement structure
+// ============================================================
+async function parseXlsxFile(file) {
+  await loadSheetJS();
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+  // Find the most likely "Activity" or "Trades" sheet
+  const sheetName = pickSheet(wb.SheetNames);
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+  return parseActivityRows(rows);
+}
+
+function pickSheet(names) {
+  // Prefer: Activity, Trades, Transactions, Positions, anything with Trans Code
+  const prefs = ['activity', 'trades', 'transactions', 'positions', 'dividends', 'equity trades', 'options trades', 'crypto trades', 'all'];
+  for (const pref of prefs) {
+    for (const n of names) {
+      if (n.toLowerCase().includes(pref)) return n;
+    }
+  }
+  return names[0];
+}
+
+function parseActivityRows(rows) {
+  // Coerce all rows to arrays of strings (XLSX may have Date objects, null, or non-array rows)
+  rows = rows.map(r => {
+    if (!r) return [];
+    if (!Array.isArray(r)) return [String(r)];
+    return r.map(c => c == null ? '' : String(c));
+  }).filter(r => r.length > 0);
+  // Find header row (the one with "Trans Code" or similar)
+  let headerRowIdx = -1;
+  let cols = [];
+  for (let i = 0; i < Math.min(10, rows.length); i++) {
+    const r = (rows[i] || []).map(c => String(c).toLowerCase().trim());
+    if (r.some(c => c === 'trans code' || c.includes('trans code') || c.includes('transaction code'))) {
+      headerRowIdx = i;
+      cols = r;
+      break;
+    }
+  }
+  if (headerRowIdx === -1) {
+    return { positions: [], dividends: [], achDeposit: 0, achWithdrawal: 0, error: 'No Trans Code column found' };
+  }
+  const idx = {
+    date:     findCol(cols, ['activity date', 'date', 'process date', 'settle date', 'pay date']),
+    ticker:   findCol(cols, ['instrument', 'symbol', 'ticker', 'security']),
+    desc:     findCol(cols, ['description', 'desc', 'name']),
+    code:     findCol(cols, ['trans code', 'transaction code', 'type']),
+    qty:      findCol(cols, ['quantity', 'qty', 'shares', 'units']),
+    price:    findCol(cols, ['price', 'rate']),
+    amount:   findCol(cols, ['amount', 'value', 'total']),
+  };
+  // Group BUY and SELL rows by ticker
+  const tradeMap = {};   // ticker → {qty, costBasis}
+  const dividends = [];  // {date, ticker, amount, type}
+  let achDeposit = 0;
+  let achWithdrawal = 0;
+  let marginInterest = 0;
+  let returnOfCapital = 0;
+  let stockLending = 0;
+  for (let i = headerRowIdx + 1; i < rows.length; i++) {
+    const r = rows[i] || [];
+    const code = idx.code !== -1 ? String(r[idx.code] || '').trim() : '';
+    const ticker = idx.ticker !== -1 ? String(r[idx.ticker] || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '') : '';
+    const qty = idx.qty !== -1 ? parseNum(r[idx.qty]) : null;
+    const price = idx.price !== -1 ? parseNum(r[idx.price]) : null;
+    const amount = idx.amount !== -1 ? parseNum(r[idx.amount]) : null;
+    const date = idx.date !== -1 ? r[idx.date] : null;
+    const dateStr = date instanceof Date ? date.toISOString().slice(0, 10) : (date ? String(date).slice(0, 10) : '');
+    if (code === 'Buy' && ticker && qty && qty > 0) {
+      if (!tradeMap[ticker]) tradeMap[ticker] = { totalShares: 0, totalCost: 0 };
+      tradeMap[ticker].totalShares += qty;
+      // Use abs(amount) for cost since Buy is negative
+      const cost = amount !== null ? Math.abs(amount) : (price ? price * qty : 0);
+      tradeMap[ticker].totalCost += cost;
+    } else if (code === 'Sell' && ticker && qty && qty > 0) {
+      if (!tradeMap[ticker]) tradeMap[ticker] = { totalShares: 0, totalCost: 0 };
+      tradeMap[ticker].totalShares -= qty;
+    } else if (code === 'CDIV' || code === 'MDIV') {
+      if (ticker && amount) {
+        dividends.push({ date: dateStr, ticker, amount, type: code === 'CDIV' ? 'Cash Div' : 'Manufactured Div' });
+      }
+    } else if (code === 'ROC') {
+      if (ticker && amount) {
+        returnOfCapital += amount;
+        dividends.push({ date: dateStr, ticker, amount, type: 'Return of Capital' });
+      }
+    } else if (code === 'ACH') {
+      if (amount) {
+        if (amount > 0) achDeposit += amount;
+        else achWithdrawal += Math.abs(amount);
+      }
+    } else if (code === 'NOA' || code === 'GOLD') {
+      // Bill payments, gold subscription = withdrawals
+      if (amount && amount < 0) achWithdrawal += Math.abs(amount);
+    } else if (code === 'ICWIRE' || code === 'GMPC' || code === 'ACATI') {
+      // Wire deposit, Gold Plan Credit, ACAT IN = deposits
+      if (amount && amount > 0) achDeposit += amount;
+    } else if (code === 'MINT') {
+      // Margin interest
+      if (amount && amount < 0) marginInterest += Math.abs(amount);
+    } else if (code === 'INT') {
+      // Interest received
+      if (amount && amount > 0) stockLending += amount;
+    } else if (code === 'SLIP') {
+      // Stock lending
+      if (amount && amount > 0) stockLending += amount;
+    }
+  }
+  // Build positions
+  const positions = [];
+  for (const ticker of Object.keys(tradeMap).sort()) {
+    const t = tradeMap[ticker];
+    if (t.totalShares <= 0.0001) continue;
+    const avgCost = t.totalCost / t.totalShares;
+    positions.push({ ticker, shares: t.totalShares, cost: avgCost, price: null, value: null, name: '', costSource: 'computed' });
+  }
+  return { positions, dividends, achDeposit, achWithdrawal, marginInterest, returnOfCapital, stockLending };
+}
+
+// ============================================================
+// CLASSIFICATION & SCORING
+// ============================================================
+function classify(ticker) { return KNOWN_FUNDS[ticker] ? KNOWN_FUNDS[ticker].class : 'unknown'; }
+function fundName(ticker) { return KNOWN_FUNDS[ticker] ? KNOWN_FUNDS[ticker].name : ''; }
+function fundTaxNote(ticker) { return KNOWN_FUNDS[ticker] ? KNOWN_FUNDS[ticker].taxNote : ''; }
+function fundBucket(ticker) { return KNOWN_FUNDS[ticker] ? KNOWN_FUNDS[ticker].bucket : 'unknown'; }
+function fundManager(ticker) { return KNOWN_FUNDS[ticker] ? KNOWN_FUNDS[ticker].manager : '—'; }
+function fundPayRate(ticker) { return KNOWN_FUNDS[ticker] ? KNOWN_FUNDS[ticker].payRate : 'N/A'; }
+function fundPayPeriods(ticker) { return PAY_RATE_PERIODS[fundPayRate(ticker)] || 0; }
+
+function scoreSustainability(p) {
+  const cls = p.class;
+  const y = p.yieldOnPrice || 0;
+  let score = 50;
+  let notes = [];
+  if (cls === '1256-cc') {
+    if (y >= 0.10 && y <= 0.18) { score = 90; notes.push('NEOS sweet spot'); }
+    else if (y < 0.10) { score = 70; notes.push('Low yield for 1256 CC'); }
+    else if (y <= 0.25) { score = 55; notes.push('Elevated — verify'); }
+    else { score = 25; notes.push('Excessive — likely ROC'); }
+  } else if (cls === 'rex-cef') {
+    if (y <= 0.30) { score = 70; notes.push('REX moderate'); }
+    else if (y <= 0.50) { score = 50; notes.push('REX heavy ROC'); }
+    else { score = 25; notes.push('REX NAV melt'); }
+  } else if (cls === 'rex-roc' || cls === 'yieldmax') {
+    score = 15; notes.push('100% ROC trap');
+  } else if (cls === 'cc-monthly') {
+    if (y >= 0.07 && y <= 0.12) { score = 85; notes.push('JPM/CC normal'); }
+    else if (y > 0.15) { score = 45; notes.push('Yield stretched'); }
+    else { score = 65; }
+  } else if (cls === 'cef') {
+    score = 60; notes.push('CEF — verify distribution type');
+  } else if (cls === 'cc-crypto') {
+    score = 55; notes.push('Crypto CC — §1256 preferred');
+  } else if (cls === 'stock' || cls === 'index') {
+    if (y > 0.03) { score = 75; notes.push('Dividend payer'); }
+    else { score = 50; }
+  } else {
+    score = 50;
+  }
+  if (p._quote && p._quote.fiftyTwoWeekLow && p._quote.fiftyTwoWeekHigh) {
+    const range = p._quote.fiftyTwoWeekHigh - p._quote.fiftyTwoWeekLow;
+    if (range > 0) {
+      const pos = (p._quote.regularMarketPrice - p._quote.fiftyTwoWeekLow) / range;
+      if (pos < 0.2) { score -= 15; notes.push('Near 52w low'); }
+      else if (pos > 0.8) { score += 5; notes.push('Near 52w high'); }
+    }
+  }
+  return { score: Math.max(0, Math.min(100, score)), notes };
+}
+
+// ============================================================
+// YAHOO FINANCE LIVE DATA — MULTI-SOURCE WITH AUTOMATIC FAILOVER
+// ============================================================
+// Tries, in order:
+//   1) Direct Yahoo query2 (fastest, but often 429 from VPN/mobile/cloudflare-served pages)
+//   2) Direct Yahoo query1 v8 (fallback direct)
+//   3) Direct Yahoo v7 quote (different endpoint)
+//   4) corsproxy.io (free, browser-friendly, reliable from cloudflare-served pages)
+//   5) allorigins.win (last-resort CORS proxy, rate-limited)
+//   6) Coinbase for BTC/ETH
+//   7) CoinGecko for BTC/ETH (final fallback)
+//
+// Returns { price, fiftyTwoWeekHigh, fiftyTwoWeekLow, _events, _source }
+async function fetchQuote(ticker) {
+  // Crypto → exchange APIs (no rate limits, no CORS)
+  if (ticker === 'BTC' || ticker === 'BTCUSD' || ticker === 'XBT') {
+    try { return Object.assign(await fetchCoinbase('BTC-USD'), { _source: 'coinbase' }); }
+    catch (e) { return Object.assign(await fetchCoinGecko('bitcoin'), { _source: 'coingecko' }); }
+  }
+  if (ticker === 'ETH' || ticker === 'ETHUSD' || ticker === 'ETHER') {
+    try { return Object.assign(await fetchCoinbase('ETH-USD'), { _source: 'coinbase' }); }
+    catch (e) { return Object.assign(await fetchCoinGecko('ethereum'), { _source: 'coingecko' }); }
+  }
+  // Try each source in order. Stop at first success.
+  // Direct Yahoo first (fastest when it works), then CORS proxies (reliable from
+  // cloudflare-served pages, mobile carriers, VPNs).
+  const sources = [
+    { name: 'yahoo-q2',     fn: () => fetchYahooChart(ticker, 'query2.finance.yahoo.com') },
+    { name: 'yahoo-q1-v8',  fn: () => fetchYahooChart(ticker, 'query1.finance.yahoo.com') },
+    { name: 'yahoo-v7',     fn: () => fetchYahooV7(ticker) },
+    { name: 'corsproxy.io', fn: () => fetchCorsproxy(ticker) },
+    { name: 'yahoo-proxy',  fn: () => fetchYahooProxy(ticker) },
+  ];
+  let lastErr = null;
+  for (const src of sources) {
+    try {
+      const r = await src.fn();
+      if (r && r.price && r.price > 0) {
+        r._source = src.name;
+        return r;
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('All sources failed for ' + ticker);
+}
+
+// fetchWithTimeout: wraps fetch() with an AbortController so a slow proxy
+// (corsproxy.io, allorigins) can't hang the whole refresh. 8s per source
+// is generous; if a source can't respond in 8s, the next one is tried.
+const FETCH_TIMEOUT_MS = 8000;
+async function fetchWithTimeout(url, opts = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+// --- Source 1+2: Yahoo Finance v8 chart (configurable host) ---
+// query2 is less rate-limited than query1, so try it first.
+async function fetchYahooChart(ticker, host) {
+  const url = `https://${host}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1y&events=div`;
+  const r = await fetchWithTimeout(url, {
+    method: 'GET',
+    credentials: 'omit',
+    headers: {
+      'Accept': 'application/json,text/plain,*/*',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+  });
+  if (!r.ok) throw new Error(`Yahoo ${host} HTTP ${r.status}`);
+  const data = await r.json();
+  const result = data?.chart?.result?.[0];
+  if (!result) throw new Error(`Yahoo ${host}: no result`);
+  const meta = result.meta || {};
+  const events = result.events || {};
+  return {
+    price: meta.regularMarketPrice,
+    fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
+    _events: events,
+  };
+}
+
+// --- Source 3: Yahoo Finance v7 quote (different endpoint, sometimes unblocked) ---
+async function fetchYahooV7(ticker) {
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}`;
+  const r = await fetchWithTimeout(url, {
+    method: 'GET',
+    credentials: 'omit',
+    headers: {
+      'Accept': 'application/json,text/plain,*/*',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    },
+  });
+  if (!r.ok) throw new Error(`Yahoo v7 HTTP ${r.status}`);
+  const data = await r.json();
+  const q = data?.quoteResponse?.result?.[0];
+  if (!q || !q.regularMarketPrice) throw new Error('Yahoo v7: no quote');
+  return {
+    price: q.regularMarketPrice,
+    fiftyTwoWeekHigh: q.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: q.fiftyTwoWeekLow,
+    _events: {}, // v7 doesn't return dividend events
+  };
+}
+
+// --- Source 4: corsproxy.io (free, browser-friendly CORS proxy) ---
+// Most reliable from cloudflare-served pages, mobile carriers, VPNs. The
+// proxy server queries Yahoo from its own IP, not yours, so it sidesteps
+// per-IP rate limits. corsproxy.io's free tier only works from real browsers
+// (server-side fetches get a paywall response).
+async function fetchCorsproxy(ticker) {
+  const target = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1y&events=div`;
+  const url = `https://corsproxy.io/?url=${encodeURIComponent(target)}`;
+  const r = await fetchWithTimeout(url, { method: 'GET', credentials: 'omit' });
+  if (!r.ok) throw new Error(`corsproxy.io HTTP ${r.status}`);
+  const text = await r.text();
+  // corsproxy.io returns text/plain. Detect paywall/error responses.
+  if (text.startsWith('{"error"')) throw new Error('corsproxy.io paywall');
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { throw new Error('corsproxy.io: invalid JSON'); }
+  const result = data?.chart?.result?.[0];
+  if (!result) throw new Error('corsproxy.io: no result');
+  const meta = result.meta || {};
+  const events = result.events || {};
+  return {
+    price: meta.regularMarketPrice,
+    fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
+    _events: events,
+  };
+}
+
+// --- Source 5: Yahoo via allorigins.win CORS proxy (last-resort fallback) ---
+async function fetchYahooProxy(ticker) {
+  const target = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1y&events=div`;
+  const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+  const r = await fetchWithTimeout(url, { method: 'GET', credentials: 'omit' });
+  if (!r.ok) throw new Error(`Yahoo proxy HTTP ${r.status}`);
+  const data = await r.json();
+  const result = data?.chart?.result?.[0];
+  if (!result) throw new Error('Yahoo proxy: no result');
+  const meta = result.meta || {};
+  const events = result.events || {};
+  return {
+    price: meta.regularMarketPrice,
+    fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
+    _events: events,
+  };
+}
+
+// --- Source 6: Coinbase for BTC/ETH (public, no CORS, no rate limit) ---
+async function fetchCoinbase(pair) {
+  const url = `https://api.coinbase.com/v2/prices/${pair}/spot`;
+  const r = await fetchWithTimeout(url, { method: 'GET', credentials: 'omit' });
+  if (!r.ok) throw new Error(`Coinbase HTTP ${r.status}`);
+  const data = await r.json();
+  const price = parseFloat(data?.data?.amount);
+  if (!price || isNaN(price)) throw new Error('Coinbase: no price');
+  return { price, fiftyTwoWeekHigh: null, fiftyTwoWeekLow: null, _events: {} };
+}
+
+// --- Source 7: CoinGecko for BTC/ETH (public fallback) ---
+async function fetchCoinGecko(coinId) {
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`;
+  const r = await fetchWithTimeout(url, { method: 'GET', credentials: 'omit' });
+  if (!r.ok) throw new Error(`CoinGecko HTTP ${r.status}`);
+  const data = await r.json();
+  const price = data?.[coinId]?.usd;
+  if (!price) throw new Error('CoinGecko: no price');
+  return { price, fiftyTwoWeekHigh: null, fiftyTwoWeekLow: null, _events: {} };
+}
+
+// Demo prices from 2026-06-13 probe (last known good)
+const DEMO_PRICES = {
+  'TSII':  { regularMarketPrice: 17.64, fiftyTwoWeekHigh: 30.39, fiftyTwoWeekLow: 16.31, _events: { dividends: makeDemoDivs(52, 0.253) } },
+  'NVII':  { regularMarketPrice: 24.96, fiftyTwoWeekHigh: 34.58, fiftyTwoWeekLow: 22.44, _events: { dividends: makeDemoDivs(52, 0.258) } },
+  'QQQI':  { regularMarketPrice: 56.14, fiftyTwoWeekHigh: 57.84, fiftyTwoWeekLow: 47.87, _events: { dividends: makeDemoDivs(12, 0.633) } },
+  'JEPQ':  { regularMarketPrice: 59.86, fiftyTwoWeekHigh: 61.17, fiftyTwoWeekLow: 52.57, _events: { dividends: makeDemoDivs(12, 0.510) } },
+  'TSI':   { regularMarketPrice: 4.53,  fiftyTwoWeekHigh: 5.06,  fiftyTwoWeekLow: 4.43,  _events: { dividends: makeDemoDivs(8, 0.048) } },
+  'YMAX':  { regularMarketPrice: 7.90,  fiftyTwoWeekHigh: 14.11, fiftyTwoWeekLow: 7.47,  _events: { dividends: makeDemoDivs(53, 0.111) } },
+  'HOOY':  { regularMarketPrice: 29.86, fiftyTwoWeekHigh: 80.99, fiftyTwoWeekLow: 25.85, _events: { dividends: makeDemoDivs(39, 1.192) } },
+  'HOOD':  { regularMarketPrice: 95.50, fiftyTwoWeekHigh: 105.00, fiftyTwoWeekLow: 18.00, _events: { dividends: { } } },
+  'TSLA':  { regularMarketPrice: 285.00, fiftyTwoWeekHigh: 350.00, fiftyTwoWeekLow: 138.00, _events: { dividends: { } } },
+  'BTC':   { regularMarketPrice: 102000, fiftyTwoWeekHigh: 110000, fiftyTwoWeekLow: 78000, _events: { dividends: { } } },
+  'BTCI':  { regularMarketPrice: 28.00, fiftyTwoWeekHigh: 32.00, fiftyTwoWeekLow: 24.00, _events: { dividends: { } } },
+  'XQQI':  { regularMarketPrice: 54.00, fiftyTwoWeekHigh: 56.00, fiftyTwoWeekLow: 45.00, _events: { dividends: makeDemoDivs(12, 0.55) } },
+  'IWMI':  { regularMarketPrice: 52.00, fiftyTwoWeekHigh: 54.00, fiftyTwoWeekLow: 45.00, _events: { dividends: makeDemoDivs(12, 0.50) } },
+  'IAUI':  { regularMarketPrice: 50.00, fiftyTwoWeekHigh: 52.00, fiftyTwoWeekLow: 45.00, _events: { dividends: { } } },
+  'SPYI':  { regularMarketPrice: 53.00, fiftyTwoWeekHigh: 55.00, fiftyTwoWeekLow: 45.00, _events: { dividends: { } } },
+  'BITY':  { regularMarketPrice: 45.00, fiftyTwoWeekHigh: 47.00, fiftyTwoWeekLow: 38.00, _events: { dividends: { } } },
+  'GPTY':  { regularMarketPrice: 48.00, fiftyTwoWeekHigh: 50.00, fiftyTwoWeekLow: 40.00, _events: { dividends: { } } },
+  'QDTE':  { regularMarketPrice: 28.00, fiftyTwoWeekHigh: 30.00, fiftyTwoWeekLow: 24.00, _events: { dividends: { } } },
+  'JEPI':  { regularMarketPrice: 58.00, fiftyTwoWeekHigh: 60.00, fiftyTwoWeekLow: 52.00, _events: { dividends: { } } },
+  'DIVO':  { regularMarketPrice: 38.00, fiftyTwoWeekHigh: 40.00, fiftyTwoWeekLow: 33.00, _events: { dividends: { } } },
+  'SPHD':  { regularMarketPrice: 48.00, fiftyTwoWeekHigh: 50.00, fiftyTwoWeekLow: 42.00, _events: { dividends: { } } },
+  'HDV':   { regularMarketPrice: 120.00, fiftyTwoWeekHigh: 125.00, fiftyTwoWeekLow: 105.00, _events: { dividends: { } } },
+  'MAGY':  { regularMarketPrice: 43.52, fiftyTwoWeekHigh: 50.00, fiftyTwoWeekLow: 35.00, _events: { dividends: { } } },
+  'TOPW':  { regularMarketPrice: 34.78, fiftyTwoWeekHigh: 45.00, fiftyTwoWeekLow: 30.00, _events: { dividends: { } } },
+  'CRF':   { regularMarketPrice: 7.16, fiftyTwoWeekHigh: 8.00, fiftyTwoWeekLow: 6.50, _events: { dividends: { } } },
+  'CLM':   { regularMarketPrice: 7.51, fiftyTwoWeekHigh: 8.50, fiftyTwoWeekLow: 6.80, _events: { dividends: { } } },
+  'STRC':  { regularMarketPrice: 94.00, fiftyTwoWeekHigh: 100.00, fiftyTwoWeekLow: 85.00, _events: { dividends: { } } },
+  'SATA':  { regularMarketPrice: 97.00, fiftyTwoWeekHigh: 102.00, fiftyTwoWeekLow: 88.00, _events: { dividends: { } } },
+  'TDAQ':  { regularMarketPrice: 28.40, fiftyTwoWeekHigh: 30.00, fiftyTwoWeekLow: 22.00, _events: { dividends: { } } },
+  'SPCX':  { regularMarketPrice: 140.00, fiftyTwoWeekHigh: 145.00, fiftyTwoWeekLow: 130.00, _events: { dividends: { } } },
+  'NVDA':  { regularMarketPrice: 205.19, fiftyTwoWeekHigh: 220.00, fiftyTwoWeekLow: 130.00, _events: { dividends: { } } },
+  'SPY':   { regularMarketPrice: 741.75, fiftyTwoWeekHigh: 750.00, fiftyTwoWeekLow: 540.00, _events: { dividends: { } } },
+  'MRVL':  { regularMarketPrice: 279.70, fiftyTwoWeekHigh: 290.00, fiftyTwoWeekLow: 130.00, _events: { dividends: { } } },
+  'AVGO':  { regularMarketPrice: 382.07, fiftyTwoWeekHigh: 400.00, fiftyTwoWeekLow: 220.00, _events: { dividends: { } } },
+  'ALAB':  { regularMarketPrice: 367.15, fiftyTwoWeekHigh: 400.00, fiftyTwoWeekLow: 200.00, _events: { dividends: { } } },
+  'FIAT':  { regularMarketPrice: 1.00, fiftyTwoWeekHigh: 1.00, fiftyTwoWeekLow: 1.00, _events: { dividends: { } } },
+};
+function makeDemoDivs(count, avgAmount) {
+  const now = Math.floor(Date.now() / 1000);
+  const out = {};
+  for (let i = 0; i < count; i++) {
+    const date = now - i * 7 * 24 * 3600;
+    out['d' + i] = { date, amount: avgAmount * (0.7 + Math.random() * 0.6) };
+  }
+  return out;
+}
+function applyManualPrices(text) {
+  // Parse "TICKER=PRICE" lines
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let count = 0;
+  for (const line of lines) {
+    const m = line.match(/^([A-Za-z0-9.\-]{1,6})\s*=\s*\$?([\d.,]+)/);
+    if (!m) continue;
+    const ticker = m[1].toUpperCase();
+    const price = parseFloat(m[2].replace(/,/g, ''));
+    if (!price || isNaN(price)) continue;
+    const p = state.positions.find(x => x.ticker === ticker);
+    if (!p) continue;
+    p._quote = p._quote || {};
+    p._quote.regularMarketPrice = price;
+    p._fromCache = true;
+    count++;
+  }
+  return count;
+}
+function loadDemoPrices() {
+  let count = 0;
+  for (const p of state.positions) {
+    if (DEMO_PRICES[p.ticker]) {
+      p._quote = JSON.parse(JSON.stringify(DEMO_PRICES[p.ticker]));
+      p._fromCache = true;
+      count++;
+    }
+  }
+  return count;
+}
+function clearAllQuotes() {
+  for (const p of state.positions) {
+    p._quote = null;
+    p._fromCache = false;
+  }
+}
+
+async function refreshAllQuotes() {
+  if (state.positions.length === 0) { toast('No positions to refresh', 'error'); return; }
+  if (state.loading) return;
+  state.loading = true;
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>Refreshing…';
+  setStatus(`Fetching ${state.positions.length} tickers from Yahoo Finance…`);
+  // Hard timeout: even if all sources hang (slow proxy, etc), the button
+  // re-enables after 90s so the user isn't permanently stuck.
+  const HARD_TIMEOUT_MS = 90000;
+  const hardTimeout = setTimeout(() => {
+    if (state.loading) {
+      state.loading = false;
+      btn.disabled = false;
+      btn.innerHTML = '⟳ Refresh Quotes';
+      setStatus('Refresh timed out. Try Auto-refresh OFF, or paste prices manually.');
+      toast('Refresh timed out after 90s. Click Refresh Quotes to retry.', 'error');
+    }
+  }, HARD_TIMEOUT_MS);
+
+  const cache = loadQuotesCache();
+  const now = Date.now();
+  const fresh = [];
+  const cachedTickers = new Set();
+  if (cache) {
+    for (const p of state.positions) {
+      if (cache.map[p.ticker] && (now - cache.at) < QUOTES_TTL_MS) {
+        p._quote = cache.map[p.ticker];
+        p._fromCache = true;
+        cachedTickers.add(p.ticker);
+      } else {
+        fresh.push(p.ticker);
+      }
+    }
+  } else {
+    fresh.push(...state.positions.map(p => p.ticker));
+  }
+  recomputeAndRender();
+  if (fresh.length === 0) {
+    state.loading = false;
+    clearTimeout(hardTimeout);
+    btn.disabled = false;
+    btn.innerHTML = '⟳ Refresh Quotes';
+    setStatus(`Loaded from cache (${cachedTickers.size} tickers, fresh within ${Math.round(QUOTES_TTL_MS/60000)} min).`);
+    state.lastQuotesAt = now;
+    return;
+  }
+  setStatus(`Fetching ${fresh.length} fresh + ${cachedTickers.size} cached…`);
+  // Smaller batches + inter-batch delay so we don't hammer CORS proxies / trigger
+  // Yahoo rate limits. CORS proxies in particular will 500/timeout under burst load.
+  // We do NOT call recomputeAndRender after each batch — that was triggering
+  // full DOM rebuilds on every batch and making the tab feel like it was spiraling.
+  // Instead, only setStatus updates between batches (no full re-render).
+  const BATCH = 2;
+  const BATCH_DELAY_MS = 200;
+  let done = 0, failed = 0;
+  const sourceCounts = {};
+  let stopped = false;
+  // Use the placeholder span from the markup (id="__refreshStopBtn"). We swap
+  // it for a real <button class="btn danger"> during refresh and restore it
+  // back to a span on exit. This is more reliable than creating fresh nodes.
+  const placeholder = document.getElementById('__refreshStopBtn');
+  const stopBtn = document.createElement('button');
+  stopBtn.className = 'btn danger';
+  stopBtn.textContent = '■ Stop Refresh';
+  stopBtn.style.marginLeft = '8px';
+  // Replace placeholder with the real button.
+  if (placeholder && placeholder.parentElement) {
+    placeholder.parentElement.replaceChild(stopBtn, placeholder);
+  } else {
+    btn.parentElement.insertBefore(stopBtn, btn.nextSibling);
+  }
+  stopBtn.addEventListener('click', () => {
+    stopped = true;
+    state.loading = false;
+    clearTimeout(hardTimeout);
+    btn.disabled = false;
+    btn.innerHTML = '⟳ Refresh Quotes';
+    // Replace the button back with the placeholder span so the markup is restored.
+    const ph = document.createElement('span');
+    ph.id = '__refreshStopBtn';
+    if (stopBtn.parentElement) stopBtn.parentElement.replaceChild(ph, stopBtn);
+    setStatus('Refresh stopped by user.');
+  });
+  for (let i = 0; i < fresh.length && !stopped; i += BATCH) {
+    const batch = fresh.slice(i, i + BATCH);
+    const results = await Promise.allSettled(batch.map(t => fetchQuote(t)));
+    if (stopped) break;
+    results.forEach((res, idx) => {
+      const ticker = batch[idx];
+      const p = state.positions.find(x => x.ticker === ticker);
+      if (!p) return;
+      if (res.status === 'fulfilled') {
+        try {
+          const q = res.value;
+          if (q.price && !q.regularMarketPrice) q.regularMarketPrice = q.price;
+          p._quote = q;
+          p._fromCache = false;
+          sourceCounts[q._source] = (sourceCounts[q._source] || 0) + 1;
+          done++;
+        } catch (e) { failed++; }
+      } else { failed++; }
+    });
+    // Lightweight progress update — text only, no DOM rebuild.
+    setStatus(`Fetched ${done + cachedTickers.size}/${state.positions.length}${failed ? `, ${failed} failed` : ''}…`);
+    if (i + BATCH < fresh.length) {
+      await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+    }
+  }
+  state.lastQuotesAt = Date.now();
+  state.loading = false;
+  clearTimeout(hardTimeout);
+  btn.disabled = false;
+  btn.innerHTML = '⟳ Refresh Quotes';
+  // Restore the placeholder span if the Stop button is still mounted (normal exit).
+  const sb = document.getElementById('__refreshStopBtn');
+  if (!sb) {
+    const ph = document.createElement('span');
+    ph.id = '__refreshStopBtn';
+    const existing = document.querySelector('.btn.danger');
+    if (existing && existing.parentElement) existing.parentElement.replaceChild(ph, existing);
+  }
+  saveQuotesCache();
+  saveState();
+  render();
+  const srcSummary = Object.entries(sourceCounts).map(([s, n]) => `${s}:${n}`).join(' · ') || 'none';
+  setStatus(`Quotes updated at ${formatTime(new Date(state.lastQuotesAt))}. ${done} fresh (${srcSummary}), ${cachedTickers.size} cached, ${failed} failed.`);
+  if (failed === fresh.length && fresh.length > 0) {
+    toast(`All ${failed} requests failed across 4 sources (Yahoo v8/v7/Stooq/Proxy). Open "Manual Prices" below.`, 'error');
+  } else if (failed) {
+    toast(`${failed} ticker(s) failed after trying all sources — see details in table.`, 'error');
+  } else {
+    toast(`Refreshed ${done + cachedTickers.size} tickers. Sources: ${srcSummary}`, 'success');
+  }
+}
+
+function computeTTMDiv(quote) {
+  if (!quote || !quote._events || !quote._events.dividends) return 0;
+  const arr = Object.values(quote._events.dividends);
+  const now = Math.floor(Date.now() / 1000);
+  const cutoff = now - 365 * 24 * 3600;
+  return arr.reduce((sum, d) => (d.date >= cutoff ? sum + (d.amount || 0) : sum), 0);
+}
+
+// TTM per-share from LOCAL dividend transactions (fallback when Yahoo quote not loaded,
+// or when Yahoo's events.dividends is missing data for this ticker).
+// Returns $/share over the trailing 12 months.
+// Dividend dates may be stored as either a Date object, a YYYY-MM-DD string, or
+// an M/D/YYYY string from a Robinhood CSV. We parse all of those.
+function parseDividendDate(d) {
+  if (!d) return null;
+  if (d instanceof Date) return d;
+  const s = String(d).trim();
+  if (!s) return null;
+  // Try ISO first: YYYY-MM-DD
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  // Then M/D/YYYY
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(s);
+  if (m) {
+    let y = +m[3];
+    if (y < 100) y += 2000;
+    return new Date(y, +m[1] - 1, +m[2]);
+  }
+  // Last resort: let Date() try
+  const parsed = new Date(s);
+  return isNaN(parsed) ? null : parsed;
+}
+function computeLocalTTM(p) {
+  if (!state.dividends || state.dividends.length === 0) return 0;
+  const now = Date.now();
+  const since = now - 365 * 86400 * 1000;
+  const total = state.dividends
+    .filter(d => {
+      if (d.ticker !== p.ticker) return false;
+      const dd = parseDividendDate(d.date);
+      if (!dd) return false;
+      return dd.getTime() >= since;
+    })
+    .reduce((s, d) => s + d.amount, 0);
+  if (!p.shares || p.shares <= 0) return 0;
+  return total / p.shares;
+}
+
+function getRecentDividendEvents(quote, since = 60 * 24 * 3600) {
+  if (!quote || !quote._events || !quote._events.dividends) return [];
+  const arr = Object.values(quote._events.dividends);
+  const now = Math.floor(Date.now() / 1000);
+  return arr.filter(d => d.date >= now - since).sort((a, b) => b.date - a.date);
+}
+
+function computeCumDividends(p) {
+  if (!state.dividends || state.dividends.length === 0) return 0;
+  return state.dividends
+    .filter(d => d.ticker === p.ticker)
+    .reduce((s, d) => s + d.amount, 0);
+}
+
+function countPayouts(p) {
+  if (!state.dividends) return 0;
+  return state.dividends.filter(d => d.ticker === p.ticker).length;
+}
+
+// ============================================================
+// $1K INJECTION SIMULATOR  (declared early so renderInjection can use it)
+// ============================================================
+// Suggested split defaults: 30% QQQI, 30% XQQI, 20% IWMI, 20% IAUI.
+// When user clicks "Add to Plan" in the suggestions section, the selected
+// ticker is added to state.injectPlan with the user's chosen amount.
+const SUGGESTED_INJECT_PLAN = [
+  { ticker: 'QQQI', weight: 0.30, label: 'NEOS Nasdaq-100 sweet spot' },
+  { ticker: 'XQQI', weight: 0.30, label: 'NEOS Nasdaq-100 hedged' },
+  { ticker: 'IWMI', weight: 0.20, label: 'NEOS Russell 2000 diversification' },
+  { ticker: 'IAUI', weight: 0.20, label: 'NEOS Gold uncorrelated hedge' },
+];
+// User can override the plan from the suggestions grid. The plan is
+// rebuilt each render from state.injectOverrides (ticker → weight).
+function buildInjectPlan() {
+  const plan = [];
+  for (const s of SUGGESTED_INJECT_PLAN) {
+    if (state.injectOverrides && state.injectOverrides[s.ticker] !== undefined) {
+      plan.push({ ticker: s.ticker, weight: state.injectOverrides[s.ticker], label: s.label });
+    } else {
+      plan.push(s);
+    }
+  }
+  if (state.injectOverrides) {
+    for (const [t, w] of Object.entries(state.injectOverrides)) {
+      if (!plan.find(p => p.ticker === t)) {
+        const fund = KNOWN_FUNDS[t];
+        plan.push({ ticker: t, weight: w, label: fund ? fund.name : t });
+      }
+    }
+  }
+  // Normalize weights to sum to 1
+  const total = plan.reduce((s, p) => s + p.weight, 0);
+  if (total > 0) for (const p of plan) p.weight = p.weight / total;
+  return plan;
+}
+
+function recomputeAndRender() {
+  for (const p of state.positions) {
+    if (p._quote) {
+      p.price = p._quote.regularMarketPrice || p.price;
+      if (p.shares && p.price) p.value = p.shares * p.price;
+    }
+    p.ttmDiv = computeTTMDiv(p._quote);
+    // Fallback to local dividend transactions if Yahoo didn't return events.
+    if (!p.ttmDiv) p.ttmDiv = computeLocalTTM(p);
+    p.yieldOnPrice = (p.price && p.ttmDiv) ? p.ttmDiv / p.price : 0;
+    p.yieldOnCost = (p.cost && p.ttmDiv) ? p.ttmDiv / p.cost : 0;
+    p.pnlDollar = p.value !== null && p.cost !== null ? p.value - (p.shares * p.cost) : null;
+    p.pnlPct = (p.cost > 0 && p.price && p.price > 0) ? (p.price - p.cost) / p.cost : null;
+    p.annualIncome = p.ttmDiv * p.shares;
+    p.monthlyIncome = p.annualIncome / 12;
+    p.weeklyIncome = p.annualIncome / 52;
+    p.dailyIncome = p.annualIncome / 365;
+    p.class = classify(p.ticker);
+    p.classLabel = CLASS_LABELS[p.class] || CLASS_LABELS.unknown;
+    p.bucket = fundBucket(p.ticker);
+    p.bucketLabel = BUCKET_LABELS[p.bucket] || BUCKET_LABELS.unknown;
+    p.manager = fundManager(p.ticker);
+    p.payRate = fundPayRate(p.ticker);
+    p.payPeriods = fundPayPeriods(p.ticker);
+    if (!p.name) p.name = fundName(p.ticker);
+    p.taxNote = fundTaxNote(p.ticker);
+    const recent = getRecentDividendEvents(p._quote, 365);
+    p.lastDiv = recent.length ? recent[0].amount : 0;
+    p.lastDivDate = recent.length ? recent[0].date : null;
+    p.cumDiv = computeCumDividends(p);
+    p.payoutsCount = countPayouts(p);
+    p.yieldToDate = (p.cost > 0 && p.cumDiv > 0) ? p.cumDiv / (p.cost * p.shares) : 0;
+    const totalCost = p.cost * p.shares;
+    p.netGainLoss = (p.pnlDollar || 0) + p.cumDiv;
+    p.netGainLossPct = totalCost > 0 ? p.netGainLoss / totalCost : 0;
+    p.netPosition = p.cumDiv - (p.pnlDollar < 0 ? -p.pnlDollar : 0);
+    if (p.payPeriods > 0 && p.lastDiv > 0 && p.cost > 0) p.efficiency = p.lastDiv / p.cost;
+    else p.efficiency = null;
+    p.weeklyFromPay = (p.lastDiv && p.payPeriods) ? p.lastDiv * p.payPeriods / 52 : 0;
+    const sc = scoreSustainability(p);
+    p.score = sc.score;
+    p.scoreNotes = sc.notes;
+  }
+  render();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function formatMoney(n, decimals = 2) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const abs = Math.abs(n);
+  return (n < 0 ? '-$' : '$') + abs.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function formatPct(n, decimals = 2) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return (n * 100).toFixed(decimals) + '%';
+}
+function formatNum(n, decimals = 4) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function formatTime(d) {
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function render() {
+  renderHero();
+  renderBuckets();
+  renderPositions();
+  renderWatchlist();
+  renderProjection();
+  renderGoals();
+  renderClassTable();
+  renderDividends();
+  renderMargin();
+  renderScaling();
+  renderACH();
+  renderInjection();
+  renderRealYield();
+  renderROTax();
+  renderGoalPath();
+  renderSuggestions();
+}
+
+function renderHero() {
+  let totalValue = 0, totalCost = 0, annualIncome = 0, cumDiv = 0;
+  let withPrice = 0;
+  for (const p of state.positions) {
+    // When no live price is set, fall back to cost basis so the totals aren't $0
+    // before the user has loaded demo prices or hit Refresh Quotes.
+    const effValue = p.value || ((p.cost || 0) * (p.shares || 0));
+    totalValue += effValue;
+    if (p.cost && p.shares) totalCost += p.cost * p.shares;
+    if (p.annualIncome) annualIncome += p.annualIncome;
+    cumDiv += p.cumDiv || 0;
+    if (p.price) withPrice++;
+  }
+  const pnl = totalValue - totalCost;
+  const pnlPct = totalCost > 0 ? pnl / totalCost : 0;
+  const daily = annualIncome / 365;
+  const weekly = annualIncome / 52;
+  const monthly = annualIncome / 12;
+  const avgYieldOnCost = totalCost > 0 ? annualIncome / totalCost : 0;
+  const avgYieldOnPrice = totalValue > 0 ? annualIncome / totalValue : 0;
+  const pricedNote = withPrice > 0 && withPrice < state.positions.length
+    ? `${withPrice}/${state.positions.length} priced · est.`
+    : withPrice === 0 && state.positions.length > 0
+      ? 'cost basis (no live prices)'
+      : `${withPrice}/${state.positions.length} priced`;
+  document.getElementById('totalValue').textContent = formatMoney(totalValue, 0);
+  document.getElementById('totalValueSub').textContent = pricedNote;
+  document.getElementById('totalCost').textContent = formatMoney(totalCost, 0);
+  document.getElementById('totalCostSub').textContent = `${state.positions.length} positions`;
+  const pnlEl = document.getElementById('totalPnL');
+  pnlEl.textContent = formatMoney(pnl, 0);
+  pnlEl.className = 'stat-value ' + (pnl > 0 ? 'green' : pnl < 0 ? 'red' : '');
+  document.getElementById('totalPnLSub').innerHTML = `<span class="${pnl > 0 ? 'pnl-pos' : pnl < 0 ? 'pnl-neg' : ''}">${formatPct(pnlPct)}</span>`;
+  document.getElementById('dailyDiv').textContent = formatMoney(daily, 0);
+  document.getElementById('dailyDivSub').textContent = `${annualIncome > 0 ? (annualIncome/365).toFixed(2) : '0'}/day`;
+  document.getElementById('weeklyDiv').textContent = formatMoney(weekly, 0);
+  document.getElementById('weeklyDivSub').textContent = `${(weekly * 4).toFixed(0)}/mo`;
+  document.getElementById('monthlyDiv').textContent = formatMoney(monthly, 0);
+  document.getElementById('monthlyDivSub').textContent = `${monthly * 12 > 0 ? formatMoney(monthly * 12, 0) + '/yr' : ''}`;
+  document.getElementById('annualDiv').textContent = formatMoney(annualIncome, 0);
+  document.getElementById('annualDivSub').textContent = `${formatPct(avgYieldOnPrice)} on value`;
+  document.getElementById('avgYield').textContent = formatPct(avgYieldOnCost);
+  document.getElementById('avgYieldSub').textContent = `Yield on cost`;
+  const netIn = (state.achDeposit || 0) - (state.achWithdrawal || 0);
+  const netPct = totalValue > 0 ? netIn / totalValue : 0;
+  const netEl = document.getElementById('netPct');
+  netEl.textContent = formatPct(netPct);
+  netEl.className = 'stat-value ' + (netPct < 0 ? 'red' : netPct > 0 ? 'green' : '');
+  document.getElementById('netPctSub').textContent = `Net ${formatMoney(netIn, 0)}`;
+}
+
+function renderBuckets() {
+  const el = document.getElementById('bucketGrid');
+  if (state.positions.length === 0) { el.innerHTML = `<div class="empty-state">Load your positions to see the Income / CEFs+Preferred / Growth breakdown. The simulator and suggestions below work without loading positions.</div>`; return; }
+  // Combined CEFs + Preferred bucket: union of positions in either group
+  const groups = { income: [], cef: [], preferred: [], growth: [], unknown: [] };
+  for (const p of state.positions) {
+    const k = p.bucket || 'unknown';
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(p);
+  }
+  // When no prices are loaded, fall back to cost so values still display.
+  // We use `p.value` if set, otherwise `p.cost * p.shares`.
+  const valOf = p => p.value || ((p.cost || 0) * (p.shares || 0));
+  const totalValue = state.positions.reduce((s, p) => s + valOf(p), 0);
+
+  // Build the three card groups. CEFs+Preferred are shown in one card.
+  const bucketDefs = [
+    { key: 'income',                label: 'Income',         color: 'green' },
+    { key: 'cef+preferred',         label: 'CEFs + Preferred', color: 'amber' },
+    { key: 'growth',                label: 'Growth',         color: 'blue' },
+  ];
+
+  const cards = bucketDefs.map(def => {
+    let items;
+    if (def.key === 'cef+preferred') {
+      items = [...(groups.cef || []), ...(groups.preferred || [])];
+    } else {
+      items = groups[def.key] || [];
+    }
+    const value = items.reduce((s, p) => s + valOf(p), 0);
+    const cost = items.reduce((s, p) => s + (p.cost * p.shares || 0), 0);
+    const annual = items.reduce((s, p) => s + (p.annualIncome || 0), 0);
+    const weight = totalValue > 0 ? value / totalValue : 0;
+    const yieldOnCost = cost > 0 ? annual / cost : 0;
+    const yieldOnPrice = value > 0 ? annual / value : 0;
+    const cardClass = def.key === 'cef+preferred' ? 'cefs' : def.key;
+    return `<div class="bucket-card ${cardClass}">
+      <div class="bucket-name" style="color:var(--${def.color});">${def.label}</div>
+      <div class="bucket-value">${formatMoney(value, 0)}</div>
+      <div style="font-size:11px; color:var(--text-dim);">${formatPct(weight, 1)} weight · ${formatPct(yieldOnPrice, 2)} yield on value</div>
+      <div class="bucket-stats">
+        <div>Daily <strong>${formatMoney(annual/365, 0)}</strong></div>
+        <div>Weekly <strong>${formatMoney(annual/52, 0)}</strong></div>
+        <div>Monthly <strong>${formatMoney(annual/12, 0)}</strong></div>
+        <div>Annual <strong>${formatMoney(annual, 0)}</strong></div>
+        <div>Positions <strong>${items.length}</strong></div>
+        <div>Cost <strong>${formatMoney(cost, 0)}</strong></div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">${cards}</div>`;
+}
+
+function renderPositions() {
+  const tbody = document.getElementById('positionsBody');
+  const filter = state.filter.toLowerCase();
+  let rows = state.positions.filter(p => !filter || p.ticker.toLowerCase().includes(filter) || (p.name || '').toLowerCase().includes(filter) || (p.manager || '').toLowerCase().includes(filter));
+  rows.sort((a, b) => {
+    const av = a[state.sortCol], bv = b[state.sortCol];
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    if (typeof av === 'string') return state.sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return state.sortAsc ? av - bv : bv - av;
+  });
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="19" class="empty-state">No positions match. <code>Try Sample Data</code> or <code>Load Ep 18 PDF Data</code>.</td></tr>`;
+    document.getElementById('positionsSub').textContent = '0 positions';
+    return;
+  }
+  document.getElementById('positionsSub').textContent = `${rows.length} of ${state.positions.length} positions`;
+  tbody.innerHTML = rows.map(p => {
+    const scoreClass = p.score >= 70 ? 'green' : p.score >= 40 ? 'amber' : 'red';
+    const yieldClass = p.yieldOnPrice > 0.30 ? 'red' : p.yieldOnPrice > 0.15 ? 'amber' : '';
+    const pnlClass = p.pnlDollar > 0 ? 'pnl-pos' : p.pnlDollar < 0 ? 'pnl-neg' : '';
+    const netClass = p.netGainLoss > 0 ? 'pnl-pos' : p.netGainLoss < 0 ? 'pnl-neg' : '';
+    const clsLabel = p.classLabel;
+    const bkLabel = p.bucketLabel;
+    const costBadge = p.costSource === 'computed' ? '<span style="color:var(--teal); font-size:9px;" title="Computed from XLSX trades">Σ</span> ' : '<span style="color:var(--text-faint); font-size:9px;" title="Manual input">M</span> ';
+    return `<tr>
+      <td><span class="ticker">${escapeHtml(p.ticker)}</span></td>
+      <td style="font-size:11px;">${escapeHtml(p.manager)}</td>
+      <td><span class="badge ${bkLabel.color}">${bkLabel.label}</span></td>
+      <td style="font-size:11px;">${escapeHtml(p.payRate)}</td>
+      <td class="mono right">${formatNum(p.shares, p.shares < 10 ? 4 : 2)}</td>
+      <td class="mono right">${costBadge}${formatMoney(p.cost, 2)}</td>
+      <td class="mono right">${p.price ? formatMoney(p.price) : '<span style="color:var(--text-faint)">—</span>'}</td>
+      <td class="mono right">${p.value ? formatMoney(p.value) : '<span style="color:var(--text-faint)">—</span>'}</td>
+      <td class="mono right ${pnlClass}">${p.pnlDollar !== null ? formatMoney(p.pnlDollar) : '—'}</td>
+      <td class="mono right ${pnlClass}">${p.pnlPct !== null ? formatPct(p.pnlPct) : '—'}</td>
+      <td class="mono right">${p.cumDiv ? formatMoney(p.cumDiv) : (state.dividends.length ? '—' : '<span style="color:var(--text-faint)">?</span>')}</td>
+      <td class="mono right ${netClass}">${p.netGainLoss !== null ? formatMoney(p.netGainLoss) : '—'}</td>
+      <td class="mono right ${netClass}">${p.netPosition !== null ? formatMoney(p.netPosition) : '—'}</td>
+      <td class="mono right">${p.ttmDiv ? '$' + p.ttmDiv.toFixed(3) : '—'}</td>
+      <td class="mono right">${p.lastDiv ? '$' + p.lastDiv.toFixed(3) : '—'}</td>
+      <td class="mono right ${yieldClass}">${p.yieldOnPrice ? formatPct(p.yieldOnPrice) : '—'}</td>
+      <td class="mono right">${p.yieldToDate ? formatPct(p.yieldToDate) : '—'}</td>
+      <td class="mono right">${p.annualIncome ? formatMoney(p.annualIncome, 0) : '—'}</td>
+      <td><span class="score-bar"><div class="${scoreClass}" style="width:${p.score}%"></div></span><span class="mono" style="color:var(--text-dim)">${p.score}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderWatchlist() {
+  const el = document.getElementById('watchlist');
+  const watch = state.positions.filter(p => p.yieldOnPrice >= 0.10).sort((a, b) => b.yieldOnPrice - a.yieldOnPrice);
+  if (watch.length === 0) {
+    el.innerHTML = `<div class="empty-state">No positions with TTM yield ≥ 10%. Refresh quotes to see high-yield metrics.</div>`;
+    return;
+  }
+  el.innerHTML = watch.map(p => {
+    const scoreClass = p.score >= 70 ? 'green' : p.score >= 40 ? 'amber' : 'red';
+    const noteText = p.scoreNotes.length ? p.scoreNotes.join(' · ') : '';
+    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+      <div>
+        <span class="ticker">${escapeHtml(p.ticker)}</span>
+        <span class="badge ${p.bucketLabel.color}" style="margin-left:6px;">${p.bucketLabel.label}</span>
+        <span class="badge ${p.classLabel.color}" style="margin-left:4px;">${p.classLabel.label}</span>
+        <div style="color:var(--text-dim); font-size:11px; margin-top:2px;">${escapeHtml(noteText)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="mono" style="font-size:15px; font-weight:700;">${formatPct(p.yieldOnPrice)}</div>
+        <div style="color:var(--text-dim); font-size:11px;">$${p.ttmDiv.toFixed(3)}/sh TTM · $${p.weeklyIncome.toFixed(2)}/wk</div>
+        <div style="margin-top:4px;"><span class="score-bar"><div class="${scoreClass}" style="width:${p.score}%"></div></span><span class="mono" style="color:var(--text-dim); font-size:11px;">${p.score}/100</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderProjection() {
+  const el = document.getElementById('projection');
+  if (state.positions.length === 0) { el.innerHTML = `<div class="empty-state">No positions.</div>`; return; }
+  const totalAnnual = state.positions.reduce((s, p) => s + (p.annualIncome || 0), 0);
+  const totalMonthly = totalAnnual / 12;
+  const totalWeekly = totalAnnual / 52;
+  const totalDaily = totalAnnual / 365;
+  const totalValue = state.positions.reduce((s, p) => s + (p.value || 0), 0);
+  const goalMonthly = 2000;
+  const pctToGoal = Math.min(100, (totalMonthly / goalMonthly) * 100);
+  const gap = Math.max(0, goalMonthly - totalMonthly);
+  const multiple = gap > 0 && totalMonthly > 0 ? goalMonthly / totalMonthly : 0;
+  const contributors = state.positions.filter(p => p.annualIncome > 0).sort((a, b) => b.annualIncome - a.annualIncome).slice(0, 5);
+  el.innerHTML = `
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:14px;">
+      <div>
+        <div style="color:var(--text-dim); font-size:9px; text-transform:uppercase; letter-spacing:0.06em;">Daily</div>
+        <div class="mono" style="font-size:18px; font-weight:700; color:var(--green);">${formatMoney(totalDaily, 0)}</div>
+      </div>
+      <div>
+        <div style="color:var(--text-dim); font-size:9px; text-transform:uppercase; letter-spacing:0.06em;">Weekly</div>
+        <div class="mono" style="font-size:18px; font-weight:700; color:var(--green);">${formatMoney(totalWeekly, 0)}</div>
+      </div>
+      <div>
+        <div style="color:var(--text-dim); font-size:9px; text-transform:uppercase; letter-spacing:0.06em;">Monthly</div>
+        <div class="mono" style="font-size:18px; font-weight:700; color:var(--green);">${formatMoney(totalMonthly, 0)}</div>
+      </div>
+      <div>
+        <div style="color:var(--text-dim); font-size:9px; text-transform:uppercase; letter-spacing:0.06em;">Annual</div>
+        <div class="mono" style="font-size:18px; font-weight:700; color:var(--green);">${formatMoney(totalAnnual, 0)}</div>
+      </div>
+    </div>
+    <div style="background:var(--bg-elev); height:10px; border-radius:5px; overflow:hidden; margin-bottom:8px;">
+      <div style="background:linear-gradient(90deg, var(--green), var(--green-dim)); height:100%; width:${pctToGoal}%; transition:width 0.6s;"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-bottom:12px;">
+      <span>${formatMoney(totalMonthly, 0)} / ${formatMoney(goalMonthly, 0)} goal</span>
+      <span>${pctToGoal.toFixed(0)}%</span>
+    </div>
+    ${gap > 0 ? `<div style="color:var(--amber); font-size:11px; margin-bottom:12px;">Need <strong>${formatMoney(gap, 0)}/mo more</strong> — <strong>${multiple.toFixed(1)}x</strong> current portfolio to hit $2K/mo at current yield.</div>` : `<div style="color:var(--green); font-size:11px; margin-bottom:12px;"><strong>$2K/mo target hit.</strong></div>`}
+    <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">Top 5 Income Contributors</div>
+    ${contributors.map(p => {
+      const pct = (p.annualIncome / totalAnnual * 100).toFixed(0);
+      return `<div style="display:flex; justify-content:space-between; font-size:11px; padding:3px 0;">
+        <span><span class="ticker" style="font-size:11px;">${escapeHtml(p.ticker)}</span> <span style="color:var(--text-dim);">${p.bucketLabel.label}</span></span>
+        <span class="mono">${formatMoney(p.annualIncome, 0)}/yr <span style="color:var(--text-dim);">(${pct}%)</span></span>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function renderGoals() {
+  const tbody = document.getElementById('goalsBody');
+  if (state.positions.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No positions.</td></tr>`; return; }
+  const t1 = state.target1;
+  const t2 = state.target2;
+  const rows = state.positions
+    .filter(p => p.weeklyIncome > 0 || (p.lastDiv && p.payPeriods))
+    .map(p => {
+      const wkly = p.weeklyIncome || 0;
+      const ratio1 = t1 > 0 ? wkly / t1 : 0;
+      const ratio2 = t2 > 0 ? wkly / t2 : 0;
+      const perShareWkly = p.shares > 0 ? wkly / p.shares : 0;
+      const perSharePrice = p.price || 0;
+      const t1Gap = Math.max(0, t1 - wkly);
+      const t2Gap = Math.max(0, t2 - wkly);
+      const t1Shares = perShareWkly > 0 ? t1Gap / perShareWkly : 0;
+      const t2Shares = perShareWkly > 0 ? t2Gap / perShareWkly : 0;
+      const t1Cash = t1Shares * perSharePrice;
+      const t2Cash = t2Shares * perSharePrice;
+      return { p, wkly, ratio1, ratio2, t1Shares, t1Cash, t2Shares, t2Cash };
+    })
+    .sort((a, b) => b.wkly - a.wkly);
+  if (rows.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No income-producing positions.</td></tr>`; return; }
+  tbody.innerHTML = rows.map(r => {
+    const p = r.p;
+    return `<tr>
+      <td><span class="ticker">${escapeHtml(p.ticker)}</span> <span style="color:var(--text-dim); font-size:10px;">${p.payRate}</span></td>
+      <td class="mono right">${formatMoney(r.wkly, 2)}</td>
+      <td class="mono right">${formatPct(r.ratio1, 1)}</td>
+      <td class="mono right">${formatMoney(t1, 0)}</td>
+      <td class="mono right">${r.t1Shares > 0 ? formatNum(r.t1Shares, 1) : '—'}</td>
+      <td class="mono right">${r.t1Cash > 0 ? formatMoney(r.t1Cash, 0) : '—'}</td>
+      <td class="mono right">${formatMoney(t2, 0)}</td>
+      <td class="mono right">${r.t2Shares > 0 ? formatNum(r.t2Shares, 1) : '—'}</td>
+      <td class="mono right">${r.t2Cash > 0 ? formatMoney(r.t2Cash, 0) : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderClassTable() {
+  const tbody = document.getElementById('classBody');
+  if (state.positions.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="empty-state">No data.</td></tr>`; return; }
+  const groups = {};
+  for (const p of state.positions) {
+    const k = p.class;
+    if (!groups[k]) groups[k] = { count: 0, cost: 0, value: 0, annual: 0 };
+    groups[k].count++;
+    if (p.cost && p.shares) groups[k].cost += p.cost * p.shares;
+    if (p.value) groups[k].value += p.value;
+    if (p.annualIncome) groups[k].annual += p.annualIncome;
+  }
+  const order = ['1256-cc', 'rex-cef', 'rex-roc', 'yieldmax', 'cc-monthly', 'cc-crypto', 'low-vol', 'cef', 'stock', 'index', 'crypto', 'cash', 'unknown'];
+  const rows = order.filter(k => groups[k]).map(k => {
+    const g = groups[k];
+    const pnl = g.value - g.cost;
+    const lbl = CLASS_LABELS[k] || CLASS_LABELS.unknown;
+    return `<tr>
+      <td><span class="badge ${lbl.color}">${lbl.label}</span></td>
+      <td class="mono right">${g.count}</td>
+      <td class="mono right">${formatMoney(g.cost, 0)}</td>
+      <td class="mono right">${formatMoney(g.value, 0)}</td>
+      <td class="mono right ${pnl > 0 ? 'pnl-pos' : pnl < 0 ? 'pnl-neg' : ''}">${formatMoney(pnl, 0)}</td>
+      <td class="mono right">${formatMoney(g.annual, 0)}</td>
+      <td class="mono right">${formatMoney(g.annual/365, 0)}</td>
+      <td class="mono right">${formatMoney(g.annual/52, 0)}</td>
+      <td class="mono right">${formatMoney(g.annual/12, 0)}</td>
+      <td class="mono right">${g.cost > 0 ? formatPct(g.annual / g.cost) : '—'}</td>
+      <td class="mono right">${g.value > 0 ? formatPct(g.annual / g.value) : '—'}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+function renderDividends() {
+  const tbody = document.getElementById('divBody');
+  if (state.dividends.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No dividend transactions loaded. Upload Robinhood's <code>dividends.csv</code> or <code>.xlsx</code> Activity Statement.</td></tr>`;
+    return;
+  }
+  const sorted = [...state.dividends].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const total = state.dividends.reduce((s, d) => s + d.amount, 0);
+  tbody.innerHTML = sorted.slice(0, 300).map(d =>
+    `<tr>
+      <td class="mono">${escapeHtml(d.date || '—')}</td>
+      <td><span class="ticker">${escapeHtml(d.ticker)}</span></td>
+      <td style="color:var(--text-dim); font-size:11px;">${escapeHtml(d.type || '—')}</td>
+      <td class="mono right">${formatMoney(d.amount)}</td>
+    </tr>`
+  ).join('') + (sorted.length > 300 ? `<tr><td colspan="4" style="text-align:center; color:var(--text-dim); padding:8px;">+ ${sorted.length - 300} more. Total: ${formatMoney(total)}</td></tr>` : '');
+}
+
+function renderMargin() {
+  const tbody = document.getElementById('marginBody');
+  const m = state.m;
+  const weeks = 56;
+  let portValue = m.startCash;
+  let marginDebt = m.startMargin;
+  const wklyYield = m.weeklyYield;
+  const annualRate = m.marginRate;
+  const wklyInterestRate = annualRate / 52;
+  let reinvested = 0;
+  const rows = [];
+  for (let w = 0; w <= weeks; w++) {
+    const wklyDivIncome = portValue * wklyYield;
+    const wklyInterest = marginDebt * wklyInterestRate;
+    const netDivCash = wklyDivIncome - wklyInterest;
+    let biweeklyInj = 0;
+    if (w > 0 && w % 2 === 0) {
+      biweeklyInj = m.paycheck - m.bills;
+    }
+    const netCash = netDivCash + biweeklyInj;
+    const reInvest = m.reinvest ? Math.max(0, netDivCash) : 0;
+    reinvested += reInvest;
+    if (w > 0) portValue += reInvest + biweeklyInj;
+    rows.push({ w, portValue, marginDebt, wklyDivIncome, wklyInterest, netDivCash, biweeklyInj, netCash, reInvest });
+  }
+  const showEveryN = 4;
+  const toShow = [0, 1, 2, 3, ...rows.slice(4).filter((_, i) => (i + 4) % showEveryN === 0).map(r => r.w)];
+  const filtered = rows.filter(r => toShow.includes(r.w));
+  tbody.innerHTML = filtered.map(r => `<tr>
+    <td class="mono">W${r.w}</td>
+    <td class="mono right">${formatMoney(r.portValue, 0)}</td>
+    <td class="mono right">${formatMoney(r.marginDebt, 0)}</td>
+    <td class="mono right">${formatMoney(r.wklyDivIncome, 0)}</td>
+    <td class="mono right">${formatMoney(r.wklyInterest, 0)}</td>
+    <td class="mono right">${formatMoney(r.netDivCash, 0)}</td>
+    <td class="mono right ${r.biweeklyInj >= 0 ? '' : 'pnl-neg'}">${r.biweeklyInj === 0 ? '—' : formatMoney(r.biweeklyInj, 0)}</td>
+    <td class="mono right">${formatMoney(r.netCash, 0)}</td>
+    <td class="mono right">${r.reInvest === 0 ? '—' : formatMoney(r.reInvest, 0)}</td>
+  </tr>`).join('');
+}
+
+function renderScaling() {
+  const tbody = document.getElementById('scalingBody');
+  if (state.positions.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Load positions to compute blended yield.</td></tr>`; return; }
+  const totalValue = state.positions.reduce((s, p) => s + (p.value || 0), 0);
+  const totalAnnual = state.positions.reduce((s, p) => s + (p.annualIncome || 0), 0);
+  const blendedAnnual = totalValue > 0 ? totalAnnual / totalValue : 0;
+  const wklyYield = blendedAnnual / 52;
+  const amounts = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500];
+  tbody.innerHTML = amounts.map(amt => {
+    const yr1Contrib = amt * 52;
+    let pv = 0, div = 0;
+    for (let w = 1; w <= 52; w++) {
+      pv += amt;
+      div += pv * wklyYield;
+    }
+    let pv5 = 0;
+    for (let w = 1; w <= 52 * 5; w++) {
+      pv5 = pv5 * (1 + wklyYield) + amt;
+    }
+    const yr5Div = pv5 * blendedAnnual;
+    const monthly = div / 12;
+    return `<tr>
+      <td class="mono right">$${amt}</td>
+      <td class="mono right">${formatMoney(yr1Contrib, 0)}</td>
+      <td class="mono right">${formatMoney(div, 0)}</td>
+      <td class="mono right">${formatMoney(pv5, 0)}</td>
+      <td class="mono right">${formatMoney(monthly, 0)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderACH() {
+  const totalValue = state.positions.reduce((s, p) => s + (p.value || 0), 0);
+  const totalCost = state.positions.reduce((s, p) => s + (p.cost * p.shares || 0), 0);
+  const netIn = (state.achDeposit || 0) - (state.achWithdrawal || 0);
+  const netPct = totalValue > 0 ? netIn / totalValue : 0;
+  const marginUsed = Math.max(0, totalCost - netIn);
+  const leverage = totalValue > 0 ? marginUsed / totalValue : 0;
+  document.getElementById('achNetDollar').textContent = formatMoney(netIn, 0);
+  document.getElementById('achNetDollar').className = 'mono ' + (netIn < 0 ? 'pnl-neg' : 'pnl-pos');
+  document.getElementById('achNetPct').textContent = formatPct(netPct);
+  document.getElementById('achNetPct').className = 'mono ' + (netPct < 0 ? 'pnl-neg' : 'pnl-pos');
+  document.getElementById('leverageRatio').textContent = formatPct(leverage);
+  document.getElementById('leverageRatio').className = 'mono ' + (leverage > 0.3 ? 'pnl-neg' : leverage > 0.1 ? '' : 'pnl-pos');
+}
+
+function renderAlerts() {
+  const el = document.getElementById('alerts');
+  const alerts = [];
+  for (const p of state.positions) {
+    if (p.yieldOnPrice > 0.50 && (p.class === 'yieldmax' || p.class === 'rex-roc')) {
+      alerts.push(`<div class="alert"><strong>${escapeHtml(p.ticker)}:</strong> TTM yield ${formatPct(p.yieldOnPrice)} — ${p.class === 'yieldmax' ? 'YieldMax' : 'REX ROC'} 100% return-of-capital trap. NAV eroding.</div>`);
+    } else if (p.yieldOnPrice > 0.30 && p.class === 'rex-cef') {
+      alerts.push(`<div class="alert amber"><strong>${escapeHtml(p.ticker)}:</strong> REX §1256 at ${formatPct(p.yieldOnPrice)} TTM. Heavy ROC component likely.</div>`);
+    }
+  }
+  const good1256 = state.positions.filter(p => p.class === '1256-cc' && p.score >= 80);
+  if (good1256.length > 0) {
+    alerts.push(`<div class="alert green"><strong>§1256 Sweet Spot:</strong> ${good1256.map(p => p.ticker).join(', ')} scoring 80+. NEOS suite holding its own.</div>`);
+  }
+  const totalValue = state.positions.reduce((s, p) => s + (p.value || 0), 0);
+  const netIn = (state.achDeposit || 0) - (state.achWithdrawal || 0);
+  if (state.achDeposit > 0 && totalValue > 0) {
+    const netPct = netIn / totalValue;
+    if (netPct < -0.3) {
+      alerts.push(`<div class="alert blue"><strong>NET % IN/OUT: ${formatPct(netPct)}.</strong> Portfolio is ${formatPct(Math.abs(netPct))} larger than capital contributed. Most of the gain is market appreciation or margin.</div>`);
+    } else if (netPct > 0.05) {
+      alerts.push(`<div class="alert green"><strong>NET % IN/OUT: ${formatPct(netPct)}.</strong> You have positive net capital in. Healthy capital position.</div>`);
+    }
+  }
+  if (state.marginInterestYTD > 0) {
+    alerts.push(`<div class="alert amber"><strong>Margin Interest YTD: ${formatMoney(state.marginInterestYTD, 0)}</strong> (from MINT rows in your .xlsx). Drag on dividend income.</div>`);
+  }
+  if (state.returnOfCapitalYTD > 0) {
+    alerts.push(`<div class="alert blue"><strong>Return of Capital YTD: ${formatMoney(state.returnOfCapitalYTD, 0)}</strong> (from ROC rows). Not real income — reduces your cost basis.</div>`);
+  }
+  el.innerHTML = alerts.join('');
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function setStatus(msg) {
+  const bar = document.getElementById('updatedBar');
+  if (msg.includes('Quotes updated at')) {
+    bar.classList.remove('stale');
+    bar.innerHTML = `Quotes updated: <strong>${msg.replace('Quotes updated at ', '')}</strong>`;
+  } else if (msg.includes('Loaded from cache')) {
+    bar.classList.add('stale');
+    bar.innerHTML = `<strong>Cached</strong> — ${msg.replace('Loaded from cache', 'data from')}`;
+  } else {
+    bar.classList.remove('stale');
+    bar.innerHTML = msg;
+  }
+  setManualPriceStatus();
+}
+function setManualPriceStatus() {
+  const el = document.getElementById('manualPriceStatus');
+  if (!el) return;
+  const withQuote = state.positions.filter(p => p._quote).length;
+  const manual = state.positions.filter(p => p._quote && p._fromCache).length;
+  if (withQuote === 0) {
+    el.textContent = `paste current prices if Yahoo is blocked (mobile/phone) · 0 of ${state.positions.length} priced`;
+  } else if (manual === withQuote && manual > 0) {
+    el.innerHTML = `<span style="color:var(--amber);">⚡ ${manual} manual/demo prices · click ⟳ Refresh Quotes to try Yahoo</span>`;
+  } else {
+    el.textContent = `${withQuote} of ${state.positions.length} priced${manual > 0 ? ` (${manual} manual/demo)` : ''}`;
+  }
+}
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.className = 'toast'; }, 4000);
+}
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportJson() {
+  const data = {
+    exportedAt: new Date().toISOString(),
+    positions: state.positions,
+    dividends: state.dividends,
+    achDeposit: state.achDeposit,
+    achWithdrawal: state.achWithdrawal,
+    m: state.m,
+    target1: state.target1,
+    target2: state.target2,
+    marginInterestYTD: state.marginInterestYTD,
+    returnOfCapitalYTD: state.returnOfCapitalYTD,
+    stockLendingYTD: state.stockLendingYTD,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rh-dashboard-v3-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported snapshot.', 'success');
+}
+function importJson(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      state.positions = data.positions || [];
+      state.dividends = data.dividends || [];
+      state.achDeposit = data.achDeposit || 0;
+      state.achWithdrawal = data.achWithdrawal || 0;
+      state.m = Object.assign(state.m, data.m || {});
+      state.target1 = data.target1 || 250;
+      state.target2 = data.target2 || 500;
+      state.marginInterestYTD = data.marginInterestYTD || 0;
+      state.returnOfCapitalYTD = data.returnOfCapitalYTD || 0;
+      state.stockLendingYTD = data.stockLendingYTD || 0;
+      state.raw = JSON.stringify(data, null, 2);
+      document.getElementById('pasteBox').value = state.raw;
+      document.getElementById('achDeposit').value = state.achDeposit;
+      document.getElementById('achWithdrawal').value = state.achWithdrawal;
+      saveState();
+      render();
+      renderAlerts();
+      toast(`Imported ${state.positions.length} positions, ${state.dividends.length} dividends.`, 'success');
+    } catch (err) {
+      toast('Invalid JSON file.', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+// EVENTS
+// ============================================================
+async function handleFile(file) {
+  if (!file) return;
+  const isXlsx = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+  if (isXlsx) {
+    setStatus(`<span class="loader"></span> Parsing XLSX ${file.name}…`);
+    try {
+      const result = await parseXlsxFile(file);
+      if (result.error) {
+        toast(`XLSX parse error: ${result.error}`, 'error');
+        setStatus('XLSX parse failed.');
+        return;
+      }
+      // Merge positions (replace existing)
+      state.positions = result.positions;
+      // Append to dividends (don't replace — keep loaded CSV dividends if any)
+      if (result.dividends.length) {
+        // Replace if new load has many
+        state.dividends = result.dividends;
+      }
+      // Update ACH
+      if (result.achDeposit > 0 || result.achWithdrawal > 0) {
+        state.achDeposit = result.achDeposit;
+        state.achWithdrawal = result.achWithdrawal;
+        document.getElementById('achDeposit').value = result.achDeposit;
+        document.getElementById('achWithdrawal').value = result.achWithdrawal;
+      }
+      if (result.marginInterest) state.marginInterestYTD = result.marginInterest;
+      if (result.returnOfCapital) state.returnOfCapitalYTD = result.returnOfCapital;
+      if (result.stockLending) state.stockLendingYTD = result.stockLending;
+      // Track input
+      const summary = `XLSX loaded: ${result.positions.length} positions, ${result.dividends.length} dividends, ACH +$${result.achDeposit.toFixed(0)}/-$${result.achWithdrawal.toFixed(0)}`;
+      state.raw = `[XLSX: ${file.name}] ` + summary;
+      document.getElementById('pasteBox').value = state.raw;
+      saveState();
+      recomputeAndRender();
+      renderAlerts();
+      toast(summary, 'success');
+      setStatus(summary + ' · Click Refresh Quotes for live data.');
+    } catch (err) {
+      toast(`XLSX error: ${err.message}`, 'error');
+      setStatus('XLSX parse failed.');
+    }
+  } else {
+    // CSV / TSV / text
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById('pasteBox').value = ev.target.result;
+      document.getElementById('parseBtn').click();
+    };
+    reader.readAsText(file);
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  handleFile(e.target.files[0]);
+});
+
+// Also support drag-and-drop on the input-section
+['dragover', 'dragenter'].forEach(ev => {
+  document.querySelector('.input-section').addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); });
+});
+document.querySelector('.input-section').addEventListener('drop', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('parseBtn').addEventListener('click', () => {
+  const text = document.getElementById('pasteBox').value;
+  state.raw = text;
+  const result = parseInput(text);
+  // XLSX-style result has positions + dividends + ACH + marginInterest + etc.
+  if (result.kind === 'xlsx') {
+    // Replace positions and dividends (XLSX is the source of truth)
+    state.positions = result.positions;
+    if (result.dividends && result.dividends.length) state.dividends = result.dividends;
+    if (result.achDeposit) {
+      state.achDeposit = result.achDeposit;
+      document.getElementById('achDeposit').value = result.achDeposit;
+    }
+    if (result.achWithdrawal) {
+      state.achWithdrawal = result.achWithdrawal;
+      document.getElementById('achWithdrawal').value = result.achWithdrawal;
+    }
+    if (result.marginInterest) state.marginInterestYTD = result.marginInterest;
+    if (result.returnOfCapital) state.returnOfCapitalYTD = result.returnOfCapital;
+    if (result.stockLending) state.stockLendingYTD = result.stockLending;
+    saveState();
+    recomputeAndRender();
+    renderAlerts();
+    toast(`Parsed XLSX: ${state.positions.length} positions, ${state.dividends.length} dividends, ACH +$${result.achDeposit.toFixed(0)}/-$${result.achWithdrawal.toFixed(0)}`, 'success');
+    return;
+  }
+  // CSV/positions: merge with existing
+  const existingByTicker = {};
+  for (const p of state.positions) existingByTicker[p.ticker] = p;
+  state.positions = result.positions.map(np => {
+    const old = existingByTicker[np.ticker];
+    if (old) return { ...old, ...np, _quote: old._quote, _fromCache: old._fromCache };
+    return np;
+  });
+  if (result.dividends.length) state.dividends = result.dividends;
+  saveState();
+  recomputeAndRender();
+  renderAlerts();
+  toast(`Parsed ${state.positions.length} positions${state.dividends.length ? `, ${state.dividends.length} dividends` : ''}.`, 'success');
+});
+
+document.getElementById('refreshBtn').addEventListener('click', refreshAllQuotes);
+
+// Manual prices / demo prices
+document.getElementById('applyManualPricesBtn').addEventListener('click', () => {
+  const text = document.getElementById('manualPricesBox').value;
+  if (!text.trim()) { toast('Paste prices first.', 'error'); return; }
+  const n = applyManualPrices(text);
+  if (n === 0) { toast('No valid TICKER=PRICE lines found.', 'error'); return; }
+  recomputeAndRender();
+  renderAlerts();
+  setStatus(`Applied ${n} manual prices. Click Apply again to update.`);
+  toast(`Applied ${n} manual prices.`, 'success');
+});
+document.getElementById('loadDemoPricesBtn').addEventListener('click', () => {
+  if (state.positions.length === 0) { toast('Load positions first.', 'error'); return; }
+  const n = loadDemoPrices();
+  recomputeAndRender();
+  renderAlerts();
+  setStatus(`Loaded demo prices for ${n} of ${state.positions.length} positions.`);
+  toast(`Demo prices loaded for ${n} tickers.`, 'success');
+});
+document.getElementById('clearManualPricesBtn').addEventListener('click', () => {
+  clearAllQuotes();
+  recomputeAndRender();
+  renderAlerts();
+  document.getElementById('manualPricesBox').value = '';
+  setStatus('Cleared all quotes.');
+  toast('Cleared all quotes.', 'success');
+});
+document.getElementById('autoBtn').addEventListener('click', () => {
+  state.autoRefresh = !state.autoRefresh;
+  document.getElementById('autoBtn').textContent = `Auto-refresh: ${state.autoRefresh ? 'ON' : 'OFF'}`;
+  if (state.autoRefresh) {
+    if (state.autoTimer) clearInterval(state.autoTimer);
+    state.autoTimer = setInterval(refreshAllQuotes, QUOTES_TTL_MS);
+    toast(`Auto-refresh ON (every ${QUOTES_TTL_MS/60000} min).`, 'success');
+  } else {
+    if (state.autoTimer) clearInterval(state.autoTimer);
+    state.autoTimer = null;
+    toast('Auto-refresh OFF.');
+  }
+  setManualPriceStatus();
+});
+
+document.getElementById('exportBtn').addEventListener('click', exportJson);
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e) => {
+  if (e.target.files[0]) importJson(e.target.files[0]);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (!confirm('Clear all loaded data? This will not affect your broker.')) return;
+  state.positions = [];
+  state.dividends = [];
+  state.raw = '';
+  state.lastQuotesAt = 0;
+  state.achDeposit = 0;
+  state.achWithdrawal = 0;
+  state.marginInterestYTD = 0;
+  state.returnOfCapitalYTD = 0;
+  state.stockLendingYTD = 0;
+  document.getElementById('pasteBox').value = '';
+  document.getElementById('achDeposit').value = 0;
+  document.getElementById('achWithdrawal').value = 0;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(QUOTES_CACHE_KEY);
+  render();
+  renderAlerts();
+  setStatus('Cleared.');
+});
+
+document.getElementById('sampleBtn').addEventListener('click', () => {
+  const sample = `Symbol,Description,Quantity,Average Cost,Total Cost
+TSII,REX TSLA Growth & Income ETF,50,25.00,1250.00
+NVII,REX NVDA Growth & Income ETF,100,28.50,2850.00
+QQQI,NEOS Nasdaq-100 High Income,40,52.00,2080.00
+JEPQ,JPMorgan Nasdaq Equity Premium,30,55.00,1650.00
+TSI,TSI MLP,500,5.20,2600.00
+YMAX,YieldMax Universe,80,12.00,960.00
+HOOY,YieldMax HOOD Option Income,20,45.00,900.00
+HOOD,Robinhood Markets,15,65.00,975.00
+TSLA,Tesla,5,250.00,1250.00
+BTC,Bitcoin,0.05,65000.00,3250.00`;
+  document.getElementById('pasteBox').value = sample;
+  document.getElementById('parseBtn').click();
+});
+
+document.getElementById('loadEp18Btn').addEventListener('click', () => {
+  const ep18 = `Symbol,Description,Quantity,Average Cost,Total Cost
+NVII,REX NVDA Growth & Income ETF,125,26.67,3333.99
+HOOY,YieldMax HOOD Option Income,53.817951,80.47,4330.40
+TSII,REX TSLA Growth & Income ETF,209,20.71,4328.30
+JEPQ,JPMorgan Nasdaq Equity Premium,42,41.90,1759.75
+TOPW,Nuveen High Income Dec 2025,41,51.48,2110.78
+YMAX,YieldMax Universe,117.319688,9.46,1110.29
+MAGY,Moors & Cabot High Yield,41,7.93,325.13
+BTCI,NEOS Bitcoin High Income,26,39.91,1037.74
+TDAQ,TappAlpha Innovation 100,29.444811,24.92,733.64
+CLM,Cornerstone Strategic Investment,27.028728,8.28,223.88
+CRF,Cornerstone Total Return,27.0513,7.93,214.54
+SATA,Strive Variable Rate Pref,22.632381,99.17,2244.47
+STRC,Strategy Perpetual Stretch Pref,5,99.00,495.00
+TSLA,Tesla,9.781656,412.62,4036.07
+NVDA,Nvidia,1.000057,188.29,188.30
+SPY,SPDR S&P 500,3,425.25,1275.75
+MRVL,Marvell Technology,10.007366,81.71,817.80
+AVGO,Broadcom,4.008312,337.23,1351.73
+ALAB,Astera Labs,6,167.32,1003.89
+FIAT,Cash,0,0,0`;
+  document.getElementById('pasteBox').value = ep18;
+  document.getElementById('parseBtn').click();
+  document.getElementById('achDeposit').value = 13431.09;
+  document.getElementById('achWithdrawal').value = 6737.48;
+  state.achDeposit = 13431.09;
+  state.achWithdrawal = 6737.48;
+  saveState();
+  renderACH();
+  toast('Loaded Ep 18 PDF data — 20 positions. Click Refresh Quotes for live prices.', 'success');
+});
+
+document.getElementById('filterBox').addEventListener('input', (e) => {
+  state.filter = e.target.value;
+  renderPositions();
+});
+
+['achDeposit', 'achWithdrawal'].forEach(id => {
+  document.getElementById(id).addEventListener('input', (e) => {
+    state[id] = parseFloat(e.target.value) || 0;
+    saveState();
+    renderHero();
+    renderACH();
+    renderAlerts();
+  });
+});
+
+const marginInputs = [
+  ['mStartCash', 'startCash'],
+  ['mStartMargin', 'startMargin'],
+  ['mWeeklyYield', 'weeklyYield'],
+  ['mMarginRate', 'marginRate'],
+  ['mPaycheck', 'paycheck'],
+  ['mBills', 'bills'],
+];
+marginInputs.forEach(([id, key]) => {
+  document.getElementById(id).addEventListener('input', (e) => {
+    state.m[key] = parseFloat(e.target.value) || 0;
+    saveState();
+    renderMargin();
+  });
+});
+document.getElementById('mReinvest').addEventListener('change', (e) => {
+  state.m.reinvest = e.target.checked;
+  saveState();
+  renderMargin();
+});
+
+['target1', 'target2'].forEach(id => {
+  document.getElementById(id).addEventListener('input', (e) => {
+    state[id] = parseFloat(e.target.value) || 0;
+    saveState();
+    renderGoals();
+  });
+});
+
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (state.sortCol === col) state.sortAsc = !state.sortAsc;
+    else { state.sortCol = col; state.sortAsc = false; }
+    saveState();
+    renderPositions();
+  });
+});
+
+// ============================================================
+// BOOT
+// ============================================================
+loadState();
+recomputeAndRender();
+renderAlerts();
+renderMargin();
+renderScaling();
+renderACH();
+renderInjection();
+renderRealYield();
+renderROTax();
+renderGoalPath();
+renderSuggestions();
+if (state.positions.length === 0) {
+  setStatus('Awaiting data. Paste Robinhood positions, drop a <code>.csv</code> or <code>.xlsx</code>, or click <strong>Try Sample Data</strong>.');
+} else {
+  setStatus(`Loaded ${state.positions.length} positions from cache. Click <strong>Refresh Quotes</strong> for live data.`);
+}
+
+// ============================================================
+// $1K INJECTION SIMULATOR  (definitions hoisted above recomputeAndRender)
+// ============================================================
+// SUGGESTED_INJECT_PLAN and buildInjectPlan are defined above recomputeAndRender
+// so they're available when the boot path calls render() before line 2700.
+
+function renderInjection() {
+  const el = document.getElementById('injectGrid');
+  // Always renders — the injection plan is independent of loaded positions.
+  // Uses a default NEOS §1256 plan ($1K split: 30/30/20/20) when none loaded.
+  const amount = Number(document.getElementById('injectAmount').value) || 1000;
+  const plan = buildInjectPlan();
+  // Use a representative yield for each ticker from KNOWN_FUNDS yield band
+  // (yield = class-based estimate when no live price loaded; falls back to 12%)
+  const YIELD_ESTIMATE = {
+    '1256-cc': 0.14, 'cc-monthly': 0.09, 'cc-crypto': 0.18, 'low-vol': 0.04,
+    'rex-cef': 0.55, 'rex-roc': 0.65, 'yieldmax': 0.65, 'cef': 0.07,
+    'preferred': 0.10, 'stock': 0.015, 'index': 0.015, 'crypto': 0,
+  };
+  const planWithYield = plan.map(p => {
+    const fund = KNOWN_FUNDS[p.ticker] || { class: 'unknown' };
+    const y = YIELD_ESTIMATE[fund.class] || 0.12;
+    const alloc = amount * p.weight;
+    return { ...p, yield: y, alloc, annual: alloc * y, monthly: alloc * y / 12 };
+  });
+  const totalAnnual = planWithYield.reduce((s, p) => s + p.annual, 0);
+  const totalMonthly = totalAnnual / 12;
+  // Compare to current state
+  const currentMonthly = state.positions.reduce((s, p) => s + (p.monthlyIncome || 0), 0);
+  const newMonthly = currentMonthly + totalMonthly;
+  const pctToGoal = Math.min(100, newMonthly / 2000 * 100);
+  const gapToGoal = Math.max(0, 2000 - newMonthly);
+  el.innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+      <div class="bucket-card income">
+        <div class="bucket-name" style="color:var(--green);">Recommended Split</div>
+        <div style="display:grid; gap:6px; margin-top:8px;">
+          ${planWithYield.map(p => {
+            const f = KNOWN_FUNDS[p.ticker] || {};
+            return `<div style="display:flex; justify-content:space-between; padding:6px 8px; background:var(--bg); border-radius:4px; font-size:12px;">
+              <span><span class="ticker">${p.ticker}</span> <span style="color:var(--text-dim);">${(p.weight*100).toFixed(0)}%</span></span>
+              <span class="mono">$${p.alloc.toFixed(0)} → <span style="color:var(--green);">$${p.annual.toFixed(0)}/yr</span></span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="bucket-card growth">
+        <div class="bucket-name" style="color:var(--blue);">Path to $2K/mo</div>
+        <div style="margin-top:8px; font-size:12px;">
+          <div style="display:flex; justify-content:space-between; padding:4px 0;"><span style="color:var(--text-dim);">Current monthly income:</span><span class="mono">$${currentMonthly.toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0;"><span style="color:var(--text-dim);">+ this injection:</span><span class="mono" style="color:var(--green);">+$${totalMonthly.toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-top:1px solid var(--border); margin-top:4px; padding-top:6px;"><span style="color:var(--text); font-weight:700;">New monthly:</span><span class="mono" style="color:var(--green); font-weight:700;">$${newMonthly.toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0;"><span style="color:var(--text-dim);">Gap to $2K goal:</span><span class="mono" style="color:${gapToGoal === 0 ? 'var(--green)' : 'var(--amber)'};">$${gapToGoal.toFixed(0)}/mo</span></div>
+        </div>
+        <div style="margin-top:10px; background:var(--bg); height:18px; border-radius:9px; overflow:hidden; position:relative;">
+          <div style="height:100%; background:linear-gradient(90deg, var(--green) 0%, var(--teal) 100%); width:${pctToGoal}%; transition:width 0.3s;"></div>
+          <div style="position:absolute; top:0; left:0; right:0; text-align:center; line-height:18px; font-size:11px; font-weight:700; color:var(--text);">${pctToGoal.toFixed(0)}% to $2K/mo goal</div>
+        </div>
+        <div style="margin-top:8px; font-size:10px; color:var(--text-dim);">All NEOS §1256 — 60/40 LTCG/STCG. No 100% ROC. No NAV decay.</div>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--text-dim); text-align:center;">
+      <em>Yields are class-based estimates (12% for unknown 1256-cc, 9% for monthly CC, 18% for crypto CC). Refresh quotes to get live per-share yields.</em>
+    </div>
+  `;
+}
+
+// ============================================================
+// NAV-DECAY-ADJUSTED YIELD (real yield)
+// ============================================================
+// For ROC-heavy positions (yieldmax, rex-roc, rex-cef), the headline yield
+// overstates the income. We estimate the ROC fraction and subtract it.
+//
+// Heuristic: rex-roc / yieldmax ≈ 100% ROC. rex-cef ≈ 80% ROC. cc-monthly / 1256-cc ≈ 0% ROC.
+// cef: variable (use 30% if unknown). preferred: ~0% ROC.
+// Real yield = headline yield × (1 - rocFraction)
+function rocFraction(cls) {
+  if (cls === 'yieldmax' || cls === 'rex-roc') return 1.0;
+  if (cls === 'rex-cef') return 0.85;
+  if (cls === 'cef') return 0.30;
+  if (cls === 'cc-monthly' || cls === '1256-cc' || cls === 'low-vol' || cls === 'preferred' || cls === 'cc-crypto') return 0;
+  if (cls === 'stock' || cls === 'index') return 0;
+  return 0;
+}
+function renderRealYield() {
+  const el = document.getElementById('realYieldGrid');
+  if (state.positions.length === 0) {
+    el.innerHTML = `<div class="empty-state">Load positions to see your real yield after NAV decay. The default NEOS plan above assumes ~1.0% NAV decay/yr — try the simulator to see how it changes with higher decay.</div>`;
+    return;
+  }
+  const rows = state.positions
+    .filter(p => p.class && p.yieldOnPrice && p.yieldOnPrice > 0)
+    .map(p => {
+      const roc = rocFraction(p.class);
+      const realYield = p.yieldOnPrice * (1 - roc);
+      const annual = p.annualIncome || 0;
+      const realAnnual = annual * (1 - roc);
+      const navDecay = p.value ? annual * roc : (p.cost * p.shares * p.yieldOnPrice * roc);
+      return { p, roc, realYield, realAnnual, navDecay, headline: p.yieldOnPrice };
+    })
+    .sort((a, b) => b.p.yieldOnPrice - a.p.yieldOnPrice);
+  if (rows.length === 0) { el.innerHTML = `<div class="empty-state">No positions with computed yield. Refresh quotes to populate.</div>`; return; }
+  el.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Class</th>
+          <th class="right">Headline Yield</th>
+          <th class="right">ROC %</th>
+          <th class="right">Real Yield</th>
+          <th class="right">Headline Annual</th>
+          <th class="right">Real Annual</th>
+          <th class="right">NAV Decay/yr</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => {
+          const isDecaying = r.roc > 0;
+          const decayClass = isDecaying ? 'pnl-neg' : '';
+          const realColor = r.realYield > 0.10 ? 'pnl-pos' : r.realYield > 0.05 ? '' : 'pnl-neg';
+          return `<tr>
+            <td><span class="ticker">${escapeHtml(r.p.ticker)}</span> <span class="badge ${r.p.classLabel.color}">${r.p.classLabel.label}</span></td>
+            <td>${escapeHtml(r.p.class)}</td>
+            <td class="mono right ${decayClass}">${formatPct(r.headline, 2)}</td>
+            <td class="mono right">${(r.roc * 100).toFixed(0)}%</td>
+            <td class="mono right ${realColor}"><strong>${formatPct(r.realYield, 2)}</strong></td>
+            <td class="mono right">${formatMoney(r.p.annualIncome, 0)}</td>
+            <td class="mono right" style="color:var(--green);"><strong>${formatMoney(r.realAnnual, 0)}</strong></td>
+            <td class="mono right ${decayClass}">${isDecaying ? '−' + formatMoney(r.navDecay, 0) : '—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div style="font-size:11px; color:var(--text-dim); margin-top:8px;">
+      <strong>Real Yield</strong> = Headline × (1 − ROC). ROC estimates: YieldMax/REX 100% = 100%, REX §1256 = 85%, CEF = 30%, NEOS/JPMorgan/monthly CC = 0%.
+      <strong>NAV Decay/yr</strong> = how much of the annual dividend is paid from your own principal.
+    </div>
+  `;
+}
+
+// ============================================================
+// ROTAX MAP (return-of-capital impact)
+// ============================================================
+function renderROTax() {
+  const el = document.getElementById('roTaxGrid');
+  if (state.positions.length === 0) {
+    el.innerHTML = `<div class="empty-state">Load positions to flag which ones are paying you back your own principal. The NEOS plan above is §1256 — no ROC trap.</div>`;
+    return;
+  }
+  const roTaxPositions = state.positions
+    .filter(p => rocFraction(p.class) > 0)
+    .map(p => {
+      const roc = rocFraction(p.class);
+      const annualDiv = p.annualIncome || 0;
+      const rocAmount = annualDiv * roc;
+      const realDiv = annualDiv * (1 - roc);
+      const monthsToErode = rocAmount > 0 ? (p.cost * p.shares) / (rocAmount / 12) : Infinity;
+      const valueForRO = p.value || (p.cost * p.shares);
+      const yearsToZero = valueForRO > 0 ? valueForRO / (rocAmount > 0 ? rocAmount : 1) : Infinity;
+      return { p, roc, annualDiv, rocAmount, realDiv, monthsToErode, yearsToZero };
+    })
+    .sort((a, b) => b.rocAmount - a.rocAmount);
+  const totalRO = roTaxPositions.reduce((s, r) => s + r.rocAmount, 0);
+  const totalDiv = state.positions.reduce((s, p) => s + (p.annualIncome || 0), 0);
+  const roPct = totalDiv > 0 ? totalRO / totalDiv : 0;
+  const bannerColor = roPct > 0.5 ? 'red' : roPct > 0.25 ? 'amber' : 'green';
+  const bannerMsg = roPct > 0.5
+    ? `🚨 ${(roPct*100).toFixed(0)}% of your annual dividends are paid from your own principal.`
+    : roPct > 0.25
+    ? `⚠️ ${(roPct*100).toFixed(0)}% of your annual dividends are paid from your own principal.`
+    : `✅ Only ${(roPct*100).toFixed(0)}% of your annual dividends are paid from your own principal.`;
+  el.innerHTML = `
+    <div class="alert ${bannerColor === 'red' ? '' : bannerColor}">
+      <strong>${bannerMsg}</strong><br>
+      <span style="color:var(--text-dim); font-size:11px;">$${totalRO.toFixed(0)} of $${totalDiv.toFixed(0)} annual dividends are non-compounding (paid from NAV).</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Class</th>
+          <th class="right">Cost Basis</th>
+          <th class="right">Annual ROC</th>
+          <th class="right">Real Annual</th>
+          <th class="right">Years to NAV=0</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${roTaxPositions.map(r => {
+          const isUrgent = r.yearsToZero < 5;
+          const isWarning = r.yearsToZero < 10;
+          const verdict = r.roc === 1.0
+            ? '🔴 100% ROC — payout is from principal. Yield = NAV decay.'
+            : r.roc >= 0.85
+            ? '🟠 Mostly ROC — verify 1099-DIV box 3 (ROC is non-taxable now, reduces basis).'
+            : '🟡 Some ROC — likely tax-efficient, but verify.';
+          return `<tr>
+            <td><span class="ticker">${escapeHtml(r.p.ticker)}</span></td>
+            <td><span class="badge ${r.p.classLabel.color}">${r.p.classLabel.label}</span></td>
+            <td class="mono right">$${(r.p.cost * r.p.shares).toFixed(0)}</td>
+            <td class="mono right pnl-neg">−$${r.rocAmount.toFixed(0)}/yr</td>
+            <td class="mono right" style="color:var(--green);">$${r.realDiv.toFixed(0)}/yr</td>
+            <td class="mono right" style="color:${isUrgent ? 'var(--red)' : isWarning ? 'var(--amber)' : 'var(--text-dim)'};">${r.yearsToZero < 100 ? r.yearsToZero.toFixed(1) + ' yrs' : '∞'}</td>
+            <td style="font-size:11px; color:var(--text-dim);">${verdict}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============================================================
+// GOAL PATH CHART
+// ============================================================
+function renderGoalPath() {
+  const el = document.getElementById('goalPathGrid');
+  if (state.positions.length === 0) { el.innerHTML = `<div class="empty-state">Load positions to project your $2K/mo path. The default NEOS plan above is the recommended starting point.</div>`; return; }
+  const months = Number(document.getElementById('goalHorizon').value) || 24;
+  const currentMonthly = state.positions.reduce((s, p) => s + (p.monthlyIncome || 0), 0);
+  const currentValue = state.positions.reduce((s, p) => s + (p.value || (p.cost * p.shares)), 0);
+  // Assumptions:
+  // - Monthly ACH deposit: estimated from (achDeposit - achWithdrawal) / months of history
+  // - DRIP: dividends reinvested at current price = monthly income × (1 + yieldOnCost)
+  // - Price-flat: NAV unchanged
+  // - Yield-flat: distribution rate unchanged
+  const monthlyACH = state.achDeposit && state.achDeposit > 0
+    ? (state.achDeposit / Math.max(1, months))
+    : 0;
+  // For a flat model, monthly income grows linearly with capital.
+  // Capital growth = monthlyACH (deposits) + monthlyIncome (DRIP, not withdrawn)
+  // Capital at month N = capital_0 + N * (monthlyACH + monthlyIncome)
+  // New positions added at current blended yield
+  const monthlyAdd = monthlyACH + currentMonthly;
+  const blendedYield = currentValue > 0 ? (currentMonthly * 12) / currentValue : 0;
+  // Trajectory points
+  const points = [];
+  for (let m = 0; m <= months; m++) {
+    const cap = currentValue + m * monthlyAdd;
+    const inc = cap * blendedYield / 12;
+    points.push({ month: m, capital: cap, monthly: inc });
+  }
+  const finalMonthly = points[points.length - 1].monthly;
+  const reachedGoal = finalMonthly >= 2000;
+  const monthsToGoal = reachedGoal
+    ? points.findIndex(p => p.monthly >= 2000)
+    : -1;
+  // Build SVG path for the trajectory
+  const W = 800, H = 180, padL = 60, padR = 20, padT = 10, padB = 30;
+  const minInc = 0;
+  const maxInc = Math.max(2000, finalMonthly, currentMonthly) * 1.1;
+  const xScale = i => padL + (i / months) * (W - padL - padR);
+  const yScale = v => H - padB - (v / maxInc) * (H - padT - padB);
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xScale(p.month).toFixed(1)} ${yScale(p.monthly).toFixed(1)}`).join(' ');
+  const goalY = yScale(2000);
+  // Find when curve hits 2000 (or not)
+  const fillD = pathD + ` L ${xScale(months).toFixed(1)} ${yScale(0).toFixed(1)} L ${xScale(0).toFixed(1)} ${yScale(0).toFixed(1)} Z`;
+  // y-axis labels at 0, 1000, 2000
+  const yLabels = [0, 1000, 2000].map(v => {
+    if (v > maxInc) return null;
+    return `<line x1="${padL}" y1="${yScale(v)}" x2="${W - padR}" y2="${yScale(v)}" stroke="var(--border)" stroke-dasharray="2,2"/>
+            <text x="${padL - 6}" y="${yScale(v) + 4}" text-anchor="end" font-size="10" fill="var(--text-dim)">$${v.toLocaleString()}</text>`;
+  }).filter(Boolean).join('');
+  el.innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+      <div class="bucket-card income">
+        <div class="bucket-name" style="color:var(--green);">Current Trajectory</div>
+        <div style="font-size:12px; margin-top:6px;">
+          <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:var(--text-dim);">Capital now:</span><span class="mono">$${currentValue.toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:var(--text-dim);">Monthly income now:</span><span class="mono">$${currentMonthly.toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:var(--text-dim);">Est. monthly ACH:</span><span class="mono">$${monthlyACH.toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:var(--text-dim);">DRIP adds/mo:</span><span class="mono">$${currentMonthly.toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:3px 0; border-top:1px solid var(--border); margin-top:4px; padding-top:6px;"><span style="color:var(--text); font-weight:700;">Capital in ${months}mo:</span><span class="mono" style="color:var(--green); font-weight:700;">$${(currentValue + months * monthlyAdd).toFixed(0)}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:var(--text); font-weight:700;">Monthly income then:</span><span class="mono" style="color:var(--green); font-weight:700;">$${finalMonthly.toFixed(0)}</span></div>
+        </div>
+      </div>
+      <div class="bucket-card ${reachedGoal ? 'income' : 'growth'}">
+        <div class="bucket-name" style="color:${reachedGoal ? 'var(--green)' : 'var(--amber)'};">${reachedGoal ? '✅ Goal Reachable' : '⚠️ Short of Goal'}</div>
+        <div style="font-size:12px; margin-top:6px;">
+          ${reachedGoal
+            ? `<div style="padding:4px 0;">$2K/mo reached in <strong style="color:var(--green);">month ${monthsToGoal}</strong> (${(monthsToGoal/12).toFixed(1)} years).</div>
+               <div style="padding:4px 0; color:var(--text-dim);">Cushion at month ${months}: <strong style="color:var(--green);">+$${(finalMonthly - 2000).toFixed(0)}/mo</strong></div>`
+            : `<div style="padding:4px 0;">$2K/mo NOT reached in ${months} months.</div>
+               <div style="padding:4px 0; color:var(--text-dim);">Gap: <strong style="color:var(--amber);">$${(2000 - finalMonthly).toFixed(0)}/mo</strong></div>
+               <div style="padding:4px 0; color:var(--text-dim);">Need to grow capital by <strong>$${(2000*12/blendedYield - currentValue).toFixed(0)}</strong> to hit the goal.</div>`
+          }
+          <div style="padding:6px 0; margin-top:6px; border-top:1px solid var(--border); font-size:11px; color:var(--text-dim);">
+            Assumes price-flat, yield-flat, all distributions DRIP'd, no withdrawals. Linear projection.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--bg); padding:14px; border-radius:8px; border:1px solid var(--border);">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block;" preserveAspectRatio="xMidYMid meet">
+        ${yLabels}
+        <line x1="${padL}" y1="${padL < 50 ? H - padB : goalY}" x2="${W - padR}" y2="${goalY}" stroke="var(--green)" stroke-width="2" stroke-dasharray="6,4"/>
+        <text x="${W - padR - 4}" y="${goalY - 6}" text-anchor="end" font-size="11" fill="var(--green)" font-weight="700">$2,000 goal</text>
+        <path d="${fillD}" fill="var(--green)" fill-opacity="0.08"/>
+        <path d="${pathD}" fill="none" stroke="var(--green)" stroke-width="2.5"/>
+        <circle cx="${xScale(months)}" cy="${yScale(finalMonthly)}" r="5" fill="var(--green)" stroke="var(--bg)" stroke-width="2"/>
+        <text x="${xScale(months) - 8}" y="${yScale(finalMonthly) - 10}" text-anchor="end" font-size="11" fill="var(--green)" font-weight="700">$${finalMonthly.toFixed(0)}/mo @ ${months}mo</text>
+        <text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="var(--text-dim)">month 0 → ${months} (${(months/12).toFixed(1)} yrs)</text>
+      </svg>
+    </div>
+  `;
+}
+
+// ============================================================
+// NEW TICKER SUGGESTIONS
+// ============================================================
+// Show high-yield CC ETFs Franklin doesn't currently hold, scored by sustainability.
+// Clicking "Add to Plan" adds the ticker to state.injectOverrides with a default weight.
+function buildSuggestions() {
+  const heldTickers = new Set(state.positions.map(p => p.ticker));
+  const candidates = [];
+  for (const [ticker, fund] of Object.entries(KNOWN_FUNDS)) {
+    if (heldTickers.has(ticker)) continue;
+    if (fund.bucket !== 'income') continue; // only suggest income-class funds
+    // Compute a sustainability score for this candidate
+    const y = getClassYieldEstimate(fund.class);
+    const sc = scoreSustainabilityForClass(fund.class, y);
+    candidates.push({ ticker, fund, score: sc.score, scoreNotes: sc.notes, yield: y });
+  }
+  // Sort by score desc, then by yield desc within same score
+  candidates.sort((a, b) => b.score - a.score || b.yield - a.yield);
+  return candidates;
+}
+function getClassYieldEstimate(cls) {
+  return {
+    '1256-cc': 0.14, 'cc-monthly': 0.09, 'cc-crypto': 0.18, 'low-vol': 0.04,
+    'rex-cef': 0.55, 'rex-roc': 0.65, 'yieldmax': 0.65, 'cef': 0.07,
+    'preferred': 0.10, 'stock': 0.015, 'index': 0.015, 'crypto': 0,
+  }[cls] || 0.10;
+}
+function scoreSustainabilityForClass(cls, y) {
+  let score = 50; const notes = [];
+  if (cls === '1256-cc') {
+    if (y >= 0.10 && y <= 0.18) { score = 90; notes.push('NEOS sweet spot'); }
+    else if (y < 0.10) { score = 70; notes.push('Low for 1256'); }
+    else if (y <= 0.25) { score = 55; notes.push('Elevated'); }
+    else { score = 25; notes.push('Excessive — likely ROC'); }
+  } else if (cls === 'rex-cef') {
+    score = 40; notes.push('REX — verify ROC %');
+  } else if (cls === 'yieldmax' || cls === 'rex-roc') {
+    score = 15; notes.push('100% ROC trap');
+  } else if (cls === 'cc-monthly') {
+    if (y >= 0.07 && y <= 0.12) { score = 85; notes.push('Monthly CC sweet spot'); }
+    else if (y > 0.15) { score = 45; notes.push('Yield stretched'); }
+    else { score = 65; }
+  } else if (cls === 'cc-crypto') {
+    score = 55; notes.push('Crypto CC — §1256 preferred');
+  } else if (cls === 'low-vol') {
+    score = 75; notes.push('Low-vol dividend');
+  } else {
+    score = 50;
+  }
+  return { score, notes };
+}
+function renderSuggestions() {
+  const el = document.getElementById('suggestionsGrid');
+  // Suggestions are independent of loaded positions — always render the full grid.
+  // Highlighted cards = tickers you already own (deeper green border).
+  const minScore = Number(document.getElementById('suggMinScore').value) || 0;
+  const candidates = buildSuggestions().filter(c => c.score >= minScore).slice(0, 24);
+  if (candidates.length === 0) { el.innerHTML = `<div class="empty-state">No candidates match the current filter.</div>`; return; }
+  // Group by manager
+  const byManager = {};
+  for (const c of candidates) {
+    const m = c.fund.manager;
+    if (!byManager[m]) byManager[m] = [];
+    byManager[m].push(c);
+  }
+  // Build a manager-grouped grid
+  const sections = Object.entries(byManager).sort((a, b) => b[1][0].score - a[1][0].score).map(([manager, items]) => `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">${escapeHtml(manager)} <span style="color:var(--text-faint);">· ${items.length}</span></div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:8px;">
+        ${items.map(c => {
+          const scoreColor = c.score >= 80 ? 'green' : c.score >= 60 ? 'amber' : 'red';
+          const isInPlan = state.injectOverrides && state.injectOverrides[c.ticker] !== undefined;
+          const owned = state.positions.some(p => p.ticker === c.ticker);
+          const ownedBadge = owned ? `<span class="badge" style="background:var(--green); color:var(--bg); margin-left:4px; font-weight:700;">OWNED</span>` : '';
+          return `<div style="background:var(--bg); border:1px solid ${owned ? 'var(--green)' : 'var(--border)'}; border-left:3px solid var(--${scoreColor}); border-radius:6px; padding:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+              <div>
+                <span class="ticker">${c.ticker}</span>${ownedBadge}
+                <span class="badge ${c.fund.bucket === 'income' ? 'green' : 'amber'}" style="margin-left:4px;">${(c.fund.class || '').toUpperCase()}</span>
+                <div style="font-size:10px; color:var(--text-dim); margin-top:2px;">${escapeHtml((c.fund.name || '').substring(0, 32))}${c.fund.name && c.fund.name.length > 32 ? '…' : ''}</div>
+              </div>
+              <span class="badge ${scoreColor}" title="${(c.scoreNotes || []).join(', ')}">${c.score}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:11px;">
+              <span style="color:var(--text-dim);">~${(c.yield*100).toFixed(1)}%</span>
+              <span style="color:var(--text-dim);">${c.fund.payRate || 'N/A'}</span>
+            </div>
+            <div style="font-size:10px; color:var(--text-faint); margin-top:4px;">${escapeHtml(c.fund.taxNote || '')}</div>
+            <button class="btn" data-add-plan="${c.ticker}" style="margin-top:8px; width:100%; padding:4px; font-size:11px; ${isInPlan ? 'background:var(--green); color:var(--bg);' : ''}">${isInPlan ? '✓ In Plan' : '+ Add to Plan'}</button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+  el.innerHTML = sections;
+  // Wire up the "Add to Plan" buttons
+  el.querySelectorAll('[data-add-plan]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = btn.getAttribute('data-add-plan');
+      if (!state.injectOverrides) state.injectOverrides = {};
+      if (state.injectOverrides[t] !== undefined) {
+        // Already in plan: remove
+        delete state.injectOverrides[t];
+      } else {
+        // Add with default 10% weight
+        state.injectOverrides[t] = 0.10;
+      }
+      renderInjection();
+      renderSuggestions();
+    });
+  });
+}
+
+// ============================================================
+// INJECTION SIMULATOR WIRING
+// ============================================================
+// Default state field. User adds tickers via the Suggestions section.
+if (!state.injectOverrides) state.injectOverrides = {};
+
+document.getElementById('injectAmount').addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  document.getElementById('injectAmountLabel').textContent = '$' + v.toLocaleString();
+  renderInjection();
+});
+document.getElementById('goalHorizon').addEventListener('change', renderGoalPath);
+document.getElementById('suggMinScore').addEventListener('change', renderSuggestions);
+</script>
+</body>
+</html>
